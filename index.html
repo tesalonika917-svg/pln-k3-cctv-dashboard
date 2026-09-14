@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLN K3 · CCTV Monitoring Dashboard</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="brand">
+        <span class="brand-mark">PLN</span>
+        <span class="brand-name">K3 Guard</span>
+      </div>
+      <button class="icon-btn" id="sidebarToggle" title="Ciutkan menu">☰</button>
+    </div>
+
+    <div class="profile">
+      <div class="avatar" id="avatarInitial">A</div>
+      <div class="profile-name" id="profileName">Admin</div>
+      <div class="profile-role">K3 Supervisor</div>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-group">
+        <a class="nav-link active" href="#dashboard"><span class="ic">⌂</span>Dashboard</a>
+      </div>
+
+      <div class="nav-label">Data Petugas</div>
+      <div class="nav-group">
+        <a class="nav-link" href="#"><span class="ic">＋</span>Tambah Petugas</a>
+        <a class="nav-link" href="#"><span class="ic">☎</span>Info Kontak</a>
+        <a class="nav-link" href="#"><span class="ic">◔</span>Grafik Petugas</a>
+      </div>
+
+      <div class="nav-label">Manajemen Perangkat</div>
+      <div class="nav-group">
+        <a class="nav-link" href="#"><span class="ic">▤</span>Direktori CCTV</a>
+        <a class="nav-link" href="#"><span class="ic">▦</span>Kelola Data</a>
+        <a class="nav-link" href="#"><span class="ic">▧</span>Rekap Laporan</a>
+      </div>
+
+      <div class="nav-label">Halaman</div>
+      <div class="nav-group">
+        <a class="nav-link" href="#"><span class="ic">◎</span>Profil</a>
+        <a class="nav-link" href="#"><span class="ic">▥</span>Kalender</a>
+        <a class="nav-link" href="#"><span class="ic">？</span>FAQ</a>
+      </div>
+
+      <div class="nav-label">Grafik &amp; Metrik</div>
+      <div class="nav-group">
+        <a class="nav-link" href="#"><span class="ic">▲</span>Pekerjaan per Unit</a>
+        <a class="nav-link" href="#"><span class="ic">≈</span>Akumulasi Pekerjaan</a>
+        <a class="nav-link" href="#"><span class="ic">🗺</span>Peta Wilayah</a>
+      </div>
+
+      <div class="nav-group nav-group-footer">
+        <a class="nav-link" href="#" id="openDataDrawerLink"><span class="ic">⇪</span>Sumber Data</a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <header class="topbar">
+      <div class="search-box">
+        <input type="text" id="globalSearch" placeholder="Cari pekerjaan, petugas, lokasi…">
+        <span class="search-ic">🔍</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="themeToggle" title="Ganti tema">☾</button>
+        <button class="icon-btn" id="notifBtn" title="Notifikasi">
+          🔔<span class="badge-dot" id="notifDot" style="display:none;"></span>
+        </button>
+        <button class="icon-btn" id="settingsBtn" title="Sumber data">⚙</button>
+        <button class="icon-btn" title="Keluar">⇥</button>
+      </div>
+    </header>
+
+    <main class="content">
+      <div class="page-head">
+        <h1>DASHBOARD</h1>
+        <p id="welcomeMsg">Selamat datang. Memuat data…</p>
+      </div>
+
+      <!-- camera / device row -->
+      <section class="camera-row" id="cameraRow">
+        <div class="camera-placeholder">Belum ada data perangkat CCTV. Klik ikon ⚙ di kanan atas untuk memuat data.</div>
+      </section>
+
+      <!-- row 1: line chart + donut -->
+      <section class="grid-row grid-row-1">
+        <div class="panel panel-line">
+          <div class="panel-head">
+            <h2>Pekerjaan per Bulan</h2>
+            <span class="panel-sub" id="lineSub"></span>
+          </div>
+          <canvas id="lineChart" height="230"></canvas>
+        </div>
+        <div class="panel panel-donut">
+          <div class="panel-head"><h2>Distribusi Unit UP3</h2></div>
+          <canvas id="donutChart" height="230"></canvas>
+          <div class="donut-legend" id="donutLegend"></div>
+        </div>
+      </section>
+
+      <!-- row 2: stacked bar + recent list -->
+      <section class="grid-row grid-row-2">
+        <div class="panel panel-bar">
+          <div class="panel-head"><h2>Pekerjaan per Unit ULP</h2></div>
+          <canvas id="barChart" height="260"></canvas>
+        </div>
+        <div class="panel panel-recent">
+          <div class="panel-head"><h2>Aktivitas Terbaru</h2></div>
+          <div class="recent-list" id="recentList">
+            <div class="empty-mini">Belum ada data.</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ============ DATA SOURCE DRAWER ============ -->
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+  <aside class="data-drawer" id="dataDrawer">
+    <div class="drawer-head">
+      <h3>Sumber Data</h3>
+      <button class="icon-btn" id="closeDrawer">✕</button>
+    </div>
+    <p class="drawer-status" id="statusMsg">Belum ada data dimuat.</p>
+
+    <div class="drawer-opt">
+      <h4>1 · Unggah file spreadsheet</h4>
+      <p>Ekspor Google Sheet ke .xlsx atau .csv, lalu unggah di sini. Diproses langsung di browser.</p>
+      <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+    </div>
+
+    <div class="drawer-opt">
+      <h4>2 · Sumber otomatis (live)</h4>
+      <p>Tempel URL CSV publik ("Publish to web") atau URL Apps Script. Tersimpan &amp; disegarkan otomatis.</p>
+      <div class="row-input">
+        <input type="url" id="csvUrlInput" placeholder="https://docs.google.com/…/pub?output=csv">
+        <button class="btn btn-primary" id="loadUrlBtn">Simpan</button>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="refreshBtn" style="display:none; margin-top:8px;">↻ Segarkan sekarang</button>
+    </div>
+
+    <div class="drawer-opt">
+      <h4>3 · Tempel data CSV</h4>
+      <textarea id="csvPasteInput" placeholder="Timestamp,Unit UP3,Unit ULP,..."></textarea>
+      <button class="btn btn-primary btn-sm" id="loadPasteBtn" style="margin-top:8px;">Muat data</button>
+    </div>
+
+    <div class="drawer-footer">
+      <button class="btn btn-ghost btn-sm" id="sampleBtn">Muat data contoh</button>
+      <button class="btn btn-ghost btn-sm" id="clearBtn">Hapus data</button>
+    </div>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
