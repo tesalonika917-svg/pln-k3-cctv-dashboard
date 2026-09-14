@@ -5,15 +5,13 @@
 
 
 /* =========================================================
-   KONFIGURASI GOOGLE SPREADSHEET
+   URL GOOGLE SHEETS
    =========================================================
 
-   GANTI DENGAN URL CSV GOOGLE SHEETS KAMU.
+   GANTI BAGIAN INI DENGAN URL CSV SPREADSHEET KAMU.
 
    Contoh:
-   https://docs.google.com/spreadsheets/d/ID/edit#gid=0
 
-   Bisa menggunakan format:
    https://docs.google.com/spreadsheets/d/ID/gviz/tq?tqx=out:csv&gid=0
 ========================================================= */
 
@@ -21,8 +19,9 @@ const SHEET_URL =
     'https://docs.google.com/spreadsheets/d/e/2PACX-1vQWRM7E3rtMsJVWf9z1cntdblP4nSP9p0QCC6DeEbVt_3MHbjicUDgP2AsgLPV-NaNAYH3YZfDwFXhI/pub?output=csv';
 
 
+
 /* =========================================================
-   VARIABEL GLOBAL
+   GLOBAL DATA
 ========================================================= */
 
 let allRows = [];
@@ -32,6 +31,7 @@ let normalizedRows = [];
 let currentKelolaRows = [];
 
 let currentDirektoriRows = [];
+
 
 
 /* =========================================================
@@ -72,7 +72,9 @@ const HEADER_MAP = {
     'dokumentasi': 'dokumentasi',
     'link': 'dokumentasi',
     'foto': 'dokumentasi'
+
 };
+
 
 
 /* =========================================================
@@ -82,13 +84,19 @@ const HEADER_MAP = {
 function esc(value) {
 
     return String(value ?? '')
+
         .replace(/&/g, '&amp;')
+
         .replace(/</g, '&lt;')
+
         .replace(/>/g, '&gt;')
+
         .replace(/"/g, '&quot;')
+
         .replace(/'/g, '&#039;');
 
 }
+
 
 
 /* =========================================================
@@ -98,15 +106,19 @@ function esc(value) {
 function normalizeHeader(value) {
 
     return String(value ?? '')
+
         .trim()
+
         .toLowerCase()
+
         .replace(/\s+/g, ' ');
 
 }
 
 
+
 /* =========================================================
-   NORMALIZE ROW
+   NORMALIZE DATA
 ========================================================= */
 
 function normalizeRows(rows) {
@@ -118,48 +130,64 @@ function normalizeRows(rows) {
 
     return rows.map(row => {
 
+
         const result = {
 
             timestamp: '',
+
             up3: '',
+
             ulp: '',
+
             perangkat: '',
+
             pekerjaan: '',
+
             lokasi: '',
+
             petugas: '',
+
             dokumentasi: ''
 
         };
 
 
-        Object.keys(row || {}).forEach(key => {
-
-            const normalizedHeader =
-                normalizeHeader(key);
-
-            const mappedField =
-                HEADER_MAP[normalizedHeader];
+        Object.keys(row || {})
+            .forEach(key => {
 
 
-            if (mappedField) {
+                const header =
+                    normalizeHeader(key);
 
-                result[mappedField] =
-                    row[key] ?? '';
 
-            }
+                const field =
+                    HEADER_MAP[header];
 
-        });
+
+                if (field) {
+
+                    result[field] =
+                        row[key] ?? '';
+
+                }
+
+
+            });
 
 
         result._date =
-            parseTimestamp(result.timestamp);
+            parseTimestamp(
+                result.timestamp
+            );
 
 
         return result;
 
+
     });
 
 }
+
 
 
 /* =========================================================
@@ -197,7 +225,6 @@ function parseTimestamp(value) {
 
 
     /*
-       Format:
        DD/MM/YYYY HH:mm:ss
     */
 
@@ -209,20 +236,26 @@ function parseTimestamp(value) {
 
     if (match) {
 
+
         const day =
             Number(match[1]);
+
 
         const month =
             Number(match[2]) - 1;
 
+
         const year =
             Number(match[3]);
+
 
         const hour =
             Number(match[4] || 0);
 
+
         const minute =
             Number(match[5] || 0);
+
 
         const second =
             Number(match[6] || 0);
@@ -245,11 +278,13 @@ function parseTimestamp(value) {
 }
 
 
+
 /* =========================================================
-   FORMAT TANGGAL
+   FORMAT TANGGAL + JAM
 ========================================================= */
 
 function fmtDate(row) {
+
 
     const raw =
         row?.timestamp ?? '';
@@ -266,12 +301,15 @@ function fmtDate(row) {
 
 
     const tanggal =
-        String(date.getDate()).padStart(2, '0');
+        String(
+            date.getDate()
+        ).padStart(2, '0');
 
 
     const bulan =
-        String(date.getMonth() + 1)
-            .padStart(2, '0');
+        String(
+            date.getMonth() + 1
+        ).padStart(2, '0');
 
 
     const tahun =
@@ -279,23 +317,30 @@ function fmtDate(row) {
 
 
     const jam =
-        String(date.getHours())
-            .padStart(2, '0');
+        String(
+            date.getHours()
+        ).padStart(2, '0');
 
 
     const menit =
-        String(date.getMinutes())
-            .padStart(2, '0');
+        String(
+            date.getMinutes()
+        ).padStart(2, '0');
 
 
     const detik =
-        String(date.getSeconds())
-            .padStart(2, '0');
+        String(
+            date.getSeconds()
+        ).padStart(2, '0');
 
 
-    return `${tanggal}/${bulan}/${tahun} ${jam}:${menit}:${detik}`;
+    return (
+        `${tanggal}/${bulan}/${tahun} ` +
+        `${jam}:${menit}:${detik}`
+    );
 
 }
+
 
 
 /* =========================================================
@@ -303,6 +348,7 @@ function fmtDate(row) {
 ========================================================= */
 
 function getDriveFileId(url) {
+
 
     if (!url) {
         return null;
@@ -315,13 +361,15 @@ function getDriveFileId(url) {
 
     try {
 
+
         const u =
             new URL(value);
 
 
         /*
-           Format:
-           https://drive.google.com/file/d/FILE_ID/view
+           FORMAT:
+
+           drive.google.com/file/d/FILE_ID/view
         */
 
         let match =
@@ -331,13 +379,16 @@ function getDriveFileId(url) {
 
 
         if (match) {
+
             return match[1];
+
         }
 
 
         /*
-           Format:
-           https://drive.google.com/open?id=FILE_ID
+           FORMAT:
+
+           drive.google.com/open?id=FILE_ID
         */
 
         const id =
@@ -345,12 +396,15 @@ function getDriveFileId(url) {
 
 
         if (id) {
+
             return id;
+
         }
 
 
         /*
-           Format lain:
+           FORMAT:
+
            /d/FILE_ID
         */
 
@@ -361,8 +415,11 @@ function getDriveFileId(url) {
 
 
         if (match) {
+
             return match[1];
+
         }
+
 
     } catch (error) {
 
@@ -374,34 +431,33 @@ function getDriveFileId(url) {
     }
 
 
-    const match =
+    const fallback =
         value.match(
             /(?:\/d\/|id=)([a-zA-Z0-9_-]+)/
         );
 
 
-    return match
-        ? match[1]
+    return fallback
+        ? fallback[1]
         : null;
 
 }
 
 
+
 /* =========================================================
-   URL GAMBAR DOKUMENTASI
+   GOOGLE DRIVE IMAGE URL
 ========================================================= */
 
 function getDocumentationImageUrl(url) {
+
 
     const driveId =
         getDriveFileId(url);
 
 
-    /*
-       Jika Google Drive
-    */
-
     if (driveId) {
+
 
         return (
             'https://drive.google.com/thumbnail' +
@@ -410,31 +466,39 @@ function getDocumentationImageUrl(url) {
             '&sz=w800'
         );
 
+
     }
 
 
     /*
-       Jika URL gambar langsung
+       Jika URL merupakan URL gambar
+       secara langsung.
     */
 
-    return String(url || '').trim();
+    return String(
+        url || ''
+    ).trim();
 
 }
 
 
+
 /* =========================================================
-   RENDER DOKUMENTASI
+   DOKUMENTASI CELL
 ========================================================= */
 
 function renderDocumentationCell(url) {
 
+
     if (!url) {
+
 
         return `
             <span class="muted">
                 Tidak ada
             </span>
         `;
+
 
     }
 
@@ -453,30 +517,36 @@ function renderDocumentationCell(url) {
 
         <div class="doc-cell">
 
+
             <a
                 href="${safeUrl}"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="doc-image-link"
+                title="Klik untuk membuka dokumentasi"
             >
+
 
                 <img
                     src="${imageUrl}"
                     alt="Dokumentasi pekerjaan"
                     class="doc-thumb"
                     loading="lazy"
+
                     onerror="
                         this.style.display='none';
 
                         const fallback =
-                        this.parentElement.nextElementSibling;
+                            this.parentElement
+                                .nextElementSibling;
 
                         if (fallback) {
                             fallback.style.display =
-                            'inline-flex';
+                                'inline-flex';
                         }
                     "
                 >
+
 
             </a>
 
@@ -488,8 +558,11 @@ function renderDocumentationCell(url) {
                 class="link-btn doc-fallback"
                 style="display:none;"
             >
+
                 ↗ Buka
+
             </a>
+
 
         </div>
 
@@ -498,11 +571,13 @@ function renderDocumentationCell(url) {
 }
 
 
+
 /* =========================================================
-   LOAD GOOGLE SHEETS
+   LOAD GOOGLE SPREADSHEET
 ========================================================= */
 
 function loadSpreadsheet() {
+
 
     if (
         !SHEET_URL ||
@@ -511,10 +586,12 @@ function loadSpreadsheet() {
         )
     ) {
 
+
         setConnectionStatus(
             false,
             'URL Spreadsheet belum diatur'
         );
+
 
         return;
 
@@ -531,57 +608,73 @@ function loadSpreadsheet() {
         SHEET_URL,
         {
 
+
             download: true,
+
 
             header: true,
 
+
             skipEmptyLines: true,
+
 
             complete: function(results) {
 
+
                 console.log(
-                    'Data Spreadsheet:',
+                    'DATA SPREADSHEET:',
                     results.data
                 );
 
 
                 allRows =
-                    Array.isArray(results.data)
+                    Array.isArray(
+                        results.data
+                    )
                         ? results.data
                         : [];
 
 
                 /*
-                   PENTING:
-
-                   Semua data spreadsheet
-                   tetap dinormalisasi.
+                   SEMUA DATA DARI SPREADSHEET
+                   DISIMPAN.
 
                    TIDAK ADA FILTER
-                   dokumentasi di sini.
+                   DOKUMENTASI.
                 */
 
                 normalizedRows =
-                    normalizeRows(allRows);
+                    normalizeRows(
+                        allRows
+                    );
 
 
                 /*
-                   Semua data masuk
-                   ke Log Pekerjaan.
+                   SEMUA DATA MASUK
+                   KE LOG PEKERJAAN.
                 */
 
                 currentKelolaRows =
-                    [...normalizedRows];
+                    [
+                        ...normalizedRows
+                    ];
 
 
                 currentDirektoriRows =
-                    [...normalizedRows];
+                    [
+                        ...normalizedRows
+                    ];
 
 
                 updateDashboard();
 
 
                 renderKelolaTable(
+                    currentKelolaRows
+                );
+
+
+                updateJumlahPekerja(
                     currentKelolaRows
                 );
 
@@ -596,13 +689,15 @@ function loadSpreadsheet() {
                     `${normalizedRows.length} data`
                 );
 
+
             },
 
 
             error: function(error) {
 
+
                 console.error(
-                    'Gagal membaca spreadsheet:',
+                    'Gagal membaca Spreadsheet:',
                     error
                 );
 
@@ -612,12 +707,15 @@ function loadSpreadsheet() {
                     'Gagal memuat data'
                 );
 
+
             }
+
 
         }
     );
 
 }
+
 
 
 /* =========================================================
@@ -628,6 +726,7 @@ function setConnectionStatus(
     connected,
     text
 ) {
+
 
     const dot =
         document.getElementById(
@@ -642,7 +741,10 @@ function setConnectionStatus(
 
 
     if (label) {
-        label.textContent = text;
+
+        label.textContent =
+            text;
+
     }
 
 
@@ -658,11 +760,13 @@ function setConnectionStatus(
 }
 
 
+
 /* =========================================================
-   DASHBOARD
+   UPDATE DASHBOARD
 ========================================================= */
 
 function updateDashboard() {
+
 
     const totalData =
         document.getElementById(
@@ -700,18 +804,23 @@ function updateDashboard() {
         new Set();
 
 
-    normalizedRows.forEach(row => {
+    normalizedRows.forEach(
+        row => {
 
-        if (row.perangkat) {
 
-            cctvSet.add(
-                String(row.perangkat)
-                    .trim()
-            );
+            if (row.perangkat) {
+
+                cctvSet.add(
+                    String(
+                        row.perangkat
+                    ).trim()
+                );
+
+            }
+
 
         }
-
-    });
+    );
 
 
     if (totalCCTV) {
@@ -722,25 +831,30 @@ function updateDashboard() {
     }
 
 
-    if (totalPekerjaan) {
-
-        const pekerjaanSet =
-            new Set();
+    const pekerjaanSet =
+        new Set();
 
 
-        normalizedRows.forEach(row => {
+    normalizedRows.forEach(
+        row => {
+
 
             if (row.pekerjaan) {
 
                 pekerjaanSet.add(
-                    String(row.pekerjaan)
-                        .trim()
+                    String(
+                        row.pekerjaan
+                    ).trim()
                 );
 
             }
 
-        });
 
+        }
+    );
+
+
+    if (totalPekerjaan) {
 
         totalPekerjaan.textContent =
             pekerjaanSet.size;
@@ -748,40 +862,42 @@ function updateDashboard() {
     }
 
 
-    if (lastUpdate) {
-
-        if (normalizedRows.length) {
-
-            const sorted =
-                [...normalizedRows]
-                    .sort(
-                        (a, b) => {
-
-                            const da =
-                                a._date
-                                    ? a._date.getTime()
-                                    : 0;
-
-                            const db =
-                                b._date
-                                    ? b._date.getTime()
-                                    : 0;
-
-                            return db - da;
-
-                        }
-                    );
+    if (
+        lastUpdate &&
+        normalizedRows.length
+    ) {
 
 
-            lastUpdate.textContent =
-                fmtDate(sorted[0]);
+        const sorted =
+            [
+                ...normalizedRows
+            ].sort(
+                (a, b) => {
 
-        } else {
 
-            lastUpdate.textContent =
-                '-';
+                    const da =
+                        a._date
+                            ? a._date.getTime()
+                            : 0;
 
-        }
+
+                    const db =
+                        b._date
+                            ? b._date.getTime()
+                            : 0;
+
+
+                    return db - da;
+
+                }
+            );
+
+
+        lastUpdate.textContent =
+            fmtDate(
+                sorted[0]
+            );
+
 
     }
 
@@ -793,11 +909,13 @@ function updateDashboard() {
 }
 
 
+
 /* =========================================================
    DASHBOARD TABLE
 ========================================================= */
 
 function renderDashboardTable() {
+
 
     const tbody =
         document.querySelector(
@@ -811,41 +929,51 @@ function renderDashboardTable() {
 
 
     const rows =
-        [...normalizedRows]
-            .sort(
-                (a, b) => {
+        [
+            ...normalizedRows
+        ]
+        .sort(
+            (a, b) => {
 
-                    const da =
-                        a._date
-                            ? a._date.getTime()
-                            : 0;
 
-                    const db =
-                        b._date
-                            ? b._date.getTime()
-                            : 0;
+                const da =
+                    a._date
+                        ? a._date.getTime()
+                        : 0;
 
-                    return db - da;
 
-                }
-            )
-            .slice(0, 10);
+                const db =
+                    b._date
+                        ? b._date.getTime()
+                        : 0;
+
+
+                return db - da;
+
+            }
+        )
+        .slice(0, 10);
 
 
     if (!rows.length) {
 
+
         tbody.innerHTML = `
 
             <tr>
+
                 <td
                     colspan="6"
-                    class="empty-cell"
-                >
+                    class="empty-cell">
+
                     Tidak ada data.
+
                 </td>
+
             </tr>
 
         `;
+
 
         return;
 
@@ -853,71 +981,84 @@ function renderDashboardTable() {
 
 
     tbody.innerHTML =
-        rows.map(row => `
+        rows.map(
+            row => `
 
-            <tr>
+                <tr>
 
-                <td>
-                    ${esc(fmtDate(row))}
-                </td>
+                    <td>
+                        ${esc(fmtDate(row))}
+                    </td>
 
-                <td>
-                    ${esc(row.up3)}
-                </td>
+                    <td>
+                        ${esc(row.up3 || '')}
+                    </td>
 
-                <td>
-                    ${esc(row.ulp)}
-                </td>
+                    <td>
+                        ${esc(row.ulp || '')}
+                    </td>
 
-                <td>
-                    ${esc(row.perangkat)}
-                </td>
+                    <td>
+                        ${esc(row.perangkat || '')}
+                    </td>
 
-                <td>
-                    ${esc(row.pekerjaan)}
-                </td>
+                    <td>
+                        ${esc(row.pekerjaan || '')}
+                    </td>
 
-                <td>
-                    ${esc(row.petugas)}
-                </td>
+                    <td>
+                        ${esc(row.petugas || '')}
+                    </td>
 
-            </tr>
+                </tr>
 
-        `).join('');
+            `
+        ).join('');
 
 }
 
 
+
 /* =========================================================
-   LOG PEKERJAAN
+   LOG PEKERJAAN VIEW
 ========================================================= */
 
 function renderKelolaDataView() {
 
+
     /*
-       PENTING:
+       SEMUA DATA.
 
-       Jangan filter berdasarkan dokumentasi.
+       TIDAK BOLEH:
 
-       Semua data spreadsheet ditampilkan.
+       filter(r => r.dokumentasi)
     */
 
     currentKelolaRows =
-        [...normalizedRows];
+        [
+            ...normalizedRows
+        ];
 
 
     renderKelolaTable(
         currentKelolaRows
     );
 
+
+    updateJumlahPekerja(
+        currentKelolaRows
+    );
+
 }
 
 
+
 /* =========================================================
-   TABEL LOG PEKERJAAN
+   LOG PEKERJAAN TABLE
 ========================================================= */
 
 function renderKelolaTable(rows) {
+
 
     const tbody =
         document.querySelector(
@@ -935,20 +1076,23 @@ function renderKelolaTable(rows) {
         rows.length === 0
     ) {
 
+
         tbody.innerHTML = `
 
             <tr>
 
                 <td
                     colspan="8"
-                    class="empty-cell"
-                >
+                    class="empty-cell">
+
                     Tidak ada data.
+
                 </td>
 
             </tr>
 
         `;
+
 
         return;
 
@@ -956,56 +1100,112 @@ function renderKelolaTable(rows) {
 
 
     tbody.innerHTML =
-        rows.map(row => `
+        rows.map(
+            row => `
 
-            <tr>
+                <tr>
 
-                <td>
-                    ${esc(fmtDate(row))}
-                </td>
-
-
-                <td>
-                    ${esc(row.up3 || '')}
-                </td>
+                    <td>
+                        ${esc(fmtDate(row))}
+                    </td>
 
 
-                <td>
-                    ${esc(row.ulp || '')}
-                </td>
+                    <td>
+                        ${esc(row.up3 || '')}
+                    </td>
 
 
-                <td>
-                    ${esc(row.perangkat || '')}
-                </td>
+                    <td>
+                        ${esc(row.ulp || '')}
+                    </td>
 
 
-                <td>
-                    ${esc(row.pekerjaan || '')}
-                </td>
+                    <td>
+                        ${esc(row.perangkat || '')}
+                    </td>
 
 
-                <td>
-                    ${esc(row.lokasi || '')}
-                </td>
+                    <td>
+                        ${esc(row.pekerjaan || '')}
+                    </td>
 
 
-                <td>
-                    ${esc(row.petugas || '')}
-                </td>
+                    <td>
+                        ${esc(row.lokasi || '')}
+                    </td>
 
 
-                <td>
-                    ${renderDocumentationCell(
-                        row.dokumentasi || ''
-                    )}
-                </td>
+                    <td>
+                        ${esc(row.petugas || '')}
+                    </td>
 
-            </tr>
 
-        `).join('');
+                    <td>
+                        ${renderDocumentationCell(
+                            row.dokumentasi || ''
+                        )}
+                    </td>
+
+
+                </tr>
+
+            `
+        ).join('');
 
 }
+
+
+
+/* =========================================================
+   JUMLAH PEKERJA
+========================================================= */
+
+function updateJumlahPekerja(rows) {
+
+
+    const element =
+        document.getElementById(
+            'jumlahPekerja'
+        );
+
+
+    if (!element) {
+        return;
+    }
+
+
+    const pekerjaSet =
+        new Set();
+
+
+    (rows || []).forEach(
+        row => {
+
+
+            const nama =
+                String(
+                    row.petugas || ''
+                ).trim();
+
+
+            if (nama) {
+
+                pekerjaSet.add(
+                    nama
+                );
+
+            }
+
+
+        }
+    );
+
+
+    element.textContent =
+        pekerjaSet.size;
+
+}
+
 
 
 /* =========================================================
@@ -1013,6 +1213,7 @@ function renderKelolaTable(rows) {
 ========================================================= */
 
 function renderDirektoriView(rows) {
+
 
     const tbody =
         document.querySelector(
@@ -1030,20 +1231,23 @@ function renderDirektoriView(rows) {
         rows.length === 0
     ) {
 
+
         tbody.innerHTML = `
 
             <tr>
 
                 <td
                     colspan="7"
-                    class="empty-cell"
-                >
+                    class="empty-cell">
+
                     Tidak ada data.
+
                 </td>
 
             </tr>
 
         `;
+
 
         return;
 
@@ -1051,45 +1255,48 @@ function renderDirektoriView(rows) {
 
 
     tbody.innerHTML =
-        rows.map(row => `
+        rows.map(
+            row => `
 
-            <tr>
+                <tr>
 
-                <td>
-                    ${esc(fmtDate(row))}
-                </td>
+                    <td>
+                        ${esc(fmtDate(row))}
+                    </td>
 
-                <td>
-                    ${esc(row.up3 || '')}
-                </td>
+                    <td>
+                        ${esc(row.up3 || '')}
+                    </td>
 
-                <td>
-                    ${esc(row.ulp || '')}
-                </td>
+                    <td>
+                        ${esc(row.ulp || '')}
+                    </td>
 
-                <td>
-                    ${esc(row.perangkat || '')}
-                </td>
+                    <td>
+                        ${esc(row.perangkat || '')}
+                    </td>
 
-                <td>
-                    ${esc(row.lokasi || '')}
-                </td>
+                    <td>
+                        ${esc(row.lokasi || '')}
+                    </td>
 
-                <td>
-                    ${esc(row.petugas || '')}
-                </td>
+                    <td>
+                        ${esc(row.petugas || '')}
+                    </td>
 
-                <td>
-                    ${renderDocumentationCell(
-                        row.dokumentasi || ''
-                    )}
-                </td>
+                    <td>
+                        ${renderDocumentationCell(
+                            row.dokumentasi || ''
+                        )}
+                    </td>
 
-            </tr>
+                </tr>
 
-        `).join('');
+            `
+        ).join('');
 
 }
+
 
 
 /* =========================================================
@@ -1097,6 +1304,7 @@ function renderDirektoriView(rows) {
 ========================================================= */
 
 function setupKelolaSearch() {
+
 
     const search =
         document.getElementById(
@@ -1113,6 +1321,7 @@ function setupKelolaSearch() {
         'input',
         function() {
 
+
             const keyword =
                 this.value
                     .toLowerCase()
@@ -1121,14 +1330,20 @@ function setupKelolaSearch() {
 
             if (!keyword) {
 
+
                 currentKelolaRows =
-                    [...normalizedRows];
+                    [
+                        ...normalizedRows
+                    ];
+
 
             } else {
+
 
                 currentKelolaRows =
                     normalizedRows.filter(
                         row => {
+
 
                             return [
 
@@ -1155,8 +1370,10 @@ function setupKelolaSearch() {
                                 keyword
                             );
 
+
                         }
                     );
+
 
             }
 
@@ -1165,10 +1382,17 @@ function setupKelolaSearch() {
                 currentKelolaRows
             );
 
+
+            updateJumlahPekerja(
+                currentKelolaRows
+            );
+
+
         }
     );
 
 }
+
 
 
 /* =========================================================
@@ -1176,6 +1400,7 @@ function setupKelolaSearch() {
 ========================================================= */
 
 function setupDirektoriSearch() {
+
 
     const search =
         document.getElementById(
@@ -1192,6 +1417,7 @@ function setupDirektoriSearch() {
         'input',
         function() {
 
+
             const keyword =
                 this.value
                     .toLowerCase()
@@ -1200,14 +1426,20 @@ function setupDirektoriSearch() {
 
             if (!keyword) {
 
+
                 currentDirektoriRows =
-                    [...normalizedRows];
+                    [
+                        ...normalizedRows
+                    ];
+
 
             } else {
+
 
                 currentDirektoriRows =
                     normalizedRows.filter(
                         row => {
+
 
                             return [
 
@@ -1232,8 +1464,10 @@ function setupDirektoriSearch() {
                                 keyword
                             );
 
+
                         }
                     );
+
 
             }
 
@@ -1242,17 +1476,20 @@ function setupDirektoriSearch() {
                 currentDirektoriRows
             );
 
+
         }
     );
 
 }
 
 
+
 /* =========================================================
-   EXPORT CSV
+   EXPORT
 ========================================================= */
 
 function setupExport() {
+
 
     const button =
         document.getElementById(
@@ -1269,13 +1506,16 @@ function setupExport() {
         'click',
         function() {
 
+
             if (
                 !currentKelolaRows.length
             ) {
 
+
                 alert(
                     'Tidak ada data untuk diekspor.'
                 );
+
 
                 return;
 
@@ -1286,29 +1526,38 @@ function setupExport() {
                 currentKelolaRows.map(
                     row => ({
 
+
                         Tanggal:
                             fmtDate(row),
+
 
                         UP3:
                             row.up3 || '',
 
+
                         ULP:
                             row.ulp || '',
+
 
                         Perangkat:
                             row.perangkat || '',
 
+
                         Pekerjaan:
                             row.pekerjaan || '',
+
 
                         Lokasi:
                             row.lokasi || '',
 
+
                         Petugas:
                             row.petugas || '',
 
+
                         Dokumentasi:
                             row.dokumentasi || ''
+
 
                     })
                 );
@@ -1336,199 +1585,12 @@ function setupExport() {
                 'log-pekerjaan-cctv.xlsx'
             );
 
+
         }
     );
 
 }
 
-
-/* =========================================================
-   NAVIGASI VIEW
-========================================================= */
-
-const VIEW_RENDERERS = {
-
-    'dashboard':
-        function() {
-
-            updateDashboard();
-
-        },
-
-
-    'cctv-direktori':
-        function() {
-
-            currentDirektoriRows =
-                [...normalizedRows];
-
-            renderDirektoriView(
-                currentDirektoriRows
-            );
-
-        },
-
-
-    /*
-       INI YANG PALING PENTING.
-
-       Menu:
-       data-view="pekerjaan-log"
-
-       diarahkan ke:
-       renderKelolaDataView()
-    */
-
-    'pekerjaan-log':
-        renderKelolaDataView,
-
-
-    'laporan-rekap':
-        updateRekap
-
-};
-
-
-/* =========================================================
-   NAVIGATION
-========================================================= */
-
-function setupNavigation() {
-
-    const links =
-        document.querySelectorAll(
-            '.nav-link'
-        );
-
-
-    links.forEach(link => {
-
-        link.addEventListener(
-            'click',
-            function(event) {
-
-                event.preventDefault();
-
-
-                const viewName =
-                    this.dataset.view;
-
-
-                if (!viewName) {
-                    return;
-                }
-
-
-                /*
-                   Active menu
-                */
-
-                links.forEach(item => {
-
-                    item.classList.remove(
-                        'active'
-                    );
-
-                });
-
-
-                this.classList.add(
-                    'active'
-                );
-
-
-                /*
-                   Hide semua view
-                */
-
-                document
-                    .querySelectorAll('.view')
-                    .forEach(view => {
-
-                        view.classList.remove(
-                            'active'
-                        );
-
-                    });
-
-
-                /*
-                   Tampilkan view yang dipilih
-                */
-
-                const target =
-                    document.getElementById(
-                        `view-${viewName}`
-                    );
-
-
-                if (target) {
-
-                    target.classList.add(
-                        'active'
-                    );
-
-                }
-
-
-                /*
-                   Judul halaman
-                */
-
-                const titleMap = {
-
-                    'dashboard':
-                        'Dashboard',
-
-                    'cctv-direktori':
-                        'Direktori CCTV',
-
-                    'pekerjaan-log':
-                        'Log Pekerjaan',
-
-                    'laporan-rekap':
-                        'Rekap Laporan'
-
-                };
-
-
-                const title =
-                    document.getElementById(
-                        'topTitle'
-                    );
-
-
-                if (title) {
-
-                    title.textContent =
-                        titleMap[viewName] ||
-                        viewName;
-
-                }
-
-
-                /*
-                   Jalankan renderer
-                */
-
-                const renderer =
-                    VIEW_RENDERERS[
-                        viewName
-                    ];
-
-
-                if (typeof renderer === 'function') {
-
-                    renderer();
-
-                }
-
-            }
-        );
-
-    });
-
-}
 
 
 /* =========================================================
@@ -1536,6 +1598,7 @@ function setupNavigation() {
 ========================================================= */
 
 function updateRekap() {
+
 
     const pekerjaan =
         document.getElementById(
@@ -1567,38 +1630,45 @@ function updateRekap() {
         new Set();
 
 
-    normalizedRows.forEach(row => {
+    normalizedRows.forEach(
+        row => {
 
-        if (row.pekerjaan) {
 
-            pekerjaanSet.add(
-                String(row.pekerjaan)
-                    .trim()
-            );
+            if (row.pekerjaan) {
+
+                pekerjaanSet.add(
+                    String(
+                        row.pekerjaan
+                    ).trim()
+                );
+
+            }
+
+
+            if (row.up3) {
+
+                up3Set.add(
+                    String(
+                        row.up3
+                    ).trim()
+                );
+
+            }
+
+
+            if (row.ulp) {
+
+                ulpSet.add(
+                    String(
+                        row.ulp
+                    ).trim()
+                );
+
+            }
+
 
         }
-
-
-        if (row.up3) {
-
-            up3Set.add(
-                String(row.up3)
-                    .trim()
-            );
-
-        }
-
-
-        if (row.ulp) {
-
-            ulpSet.add(
-                String(row.ulp)
-                    .trim()
-            );
-
-        }
-
-    });
+    );
 
 
     if (pekerjaan) {
@@ -1627,6 +1697,227 @@ function updateRekap() {
 }
 
 
+
+/* =========================================================
+   VIEW RENDERERS
+========================================================= */
+
+const VIEW_RENDERERS = {
+
+
+    'dashboard':
+        function() {
+
+            updateDashboard();
+
+        },
+
+
+    'cctv-direktori':
+        function() {
+
+            currentDirektoriRows =
+                [
+                    ...normalizedRows
+                ];
+
+
+            renderDirektoriView(
+                currentDirektoriRows
+            );
+
+        },
+
+
+    /*
+       PENTING:
+
+       data-view HTML:
+
+       pekerjaan-log
+
+       harus menuju:
+
+       renderKelolaDataView
+    */
+
+    'pekerjaan-log':
+        renderKelolaDataView,
+
+
+    'laporan-rekap':
+        updateRekap
+
+};
+
+
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+
+function setupNavigation() {
+
+
+    const links =
+        document.querySelectorAll(
+            '.nav-link'
+        );
+
+
+    links.forEach(
+        link => {
+
+
+            link.addEventListener(
+                'click',
+                function(event) {
+
+
+                    event.preventDefault();
+
+
+                    const viewName =
+                        this.dataset.view;
+
+
+                    if (!viewName) {
+                        return;
+                    }
+
+
+                    /*
+                       ACTIVE MENU
+                    */
+
+                    links.forEach(
+                        item => {
+
+                            item.classList.remove(
+                                'active'
+                            );
+
+                        }
+                    );
+
+
+                    this.classList.add(
+                        'active'
+                    );
+
+
+                    /*
+                       HIDE SEMUA VIEW
+                    */
+
+                    document
+                        .querySelectorAll(
+                            '.view'
+                        )
+                        .forEach(
+                            view => {
+
+                                view.classList.remove(
+                                    'active'
+                                );
+
+                            }
+                        );
+
+
+                    /*
+                       TAMPILKAN VIEW
+                    */
+
+                    const target =
+                        document.getElementById(
+                            `view-${viewName}`
+                        );
+
+
+                    if (target) {
+
+                        target.classList.add(
+                            'active'
+                        );
+
+                    }
+
+
+                    /*
+                       JUDUL
+                    */
+
+                    const titleMap = {
+
+
+                        'dashboard':
+                            'Dashboard',
+
+
+                        'cctv-direktori':
+                            'Direktori CCTV',
+
+
+                        'pekerjaan-log':
+                            'Log Pekerjaan',
+
+
+                        'laporan-rekap':
+                            'Rekap Laporan'
+
+
+                    };
+
+
+                    const title =
+                        document.getElementById(
+                            'topTitle'
+                        );
+
+
+                    if (title) {
+
+                        title.textContent =
+                            titleMap[
+                                viewName
+                            ] ||
+                            viewName;
+
+                    }
+
+
+                    /*
+                       RENDER
+                    */
+
+                    const renderer =
+                        VIEW_RENDERERS[
+                            viewName
+                        ];
+
+
+                    if (
+                        typeof renderer ===
+                        'function'
+                    ) {
+
+                        renderer();
+
+                    }
+
+
+                }
+            );
+
+
+        }
+    );
+
+}
+
+
+
 /* =========================================================
    INITIALIZE
 ========================================================= */
@@ -1635,19 +1926,25 @@ document.addEventListener(
     'DOMContentLoaded',
     function() {
 
+
         setupNavigation();
+
 
         setupKelolaSearch();
 
+
         setupDirektoriSearch();
+
 
         setupExport();
 
+
         /*
-           Load data spreadsheet
+           LOAD DATA
         */
 
         loadSpreadsheet();
+
 
     }
 );
