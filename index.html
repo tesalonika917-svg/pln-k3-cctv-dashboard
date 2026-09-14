@@ -22,40 +22,40 @@
     <div class="profile">
       <div class="avatar" id="avatarInitial">A</div>
       <div class="profile-name" id="profileName">Admin</div>
-      <div class="profile-role">K3 Supervisor</div>
+      <div class="profile-role" id="profileRole">K3 Supervisor</div>
     </div>
 
     <nav class="nav">
       <div class="nav-group">
-        <a class="nav-link active" href="#dashboard"><span class="ic">⌂</span>Dashboard</a>
+        <a class="nav-link active" href="#" data-view="dashboard"><span class="ic">⌂</span>Dashboard</a>
       </div>
 
       <div class="nav-label">Data Petugas</div>
       <div class="nav-group">
-        <a class="nav-link" href="#"><span class="ic">＋</span>Tambah Petugas</a>
-        <a class="nav-link" href="#"><span class="ic">☎</span>Info Kontak</a>
-        <a class="nav-link" href="#"><span class="ic">◔</span>Grafik Petugas</a>
+        <a class="nav-link" href="#" data-view="petugas-tambah"><span class="ic">＋</span>Tambah Petugas</a>
+        <a class="nav-link" href="#" data-view="petugas-kontak"><span class="ic">☎</span>Info Kontak</a>
+        <a class="nav-link" href="#" data-view="petugas-grafik"><span class="ic">◔</span>Grafik Petugas</a>
       </div>
 
       <div class="nav-label">Manajemen Perangkat</div>
       <div class="nav-group">
-        <a class="nav-link" href="#"><span class="ic">▤</span>Direktori CCTV</a>
-        <a class="nav-link" href="#"><span class="ic">▦</span>Kelola Data</a>
-        <a class="nav-link" href="#"><span class="ic">▧</span>Rekap Laporan</a>
+        <a class="nav-link" href="#" data-view="cctv-direktori"><span class="ic">▤</span>Direktori CCTV</a>
+        <a class="nav-link" href="#" data-view="data-kelola"><span class="ic">▦</span>Kelola Data</a>
+        <a class="nav-link" href="#" data-view="laporan-rekap"><span class="ic">▧</span>Rekap Laporan</a>
       </div>
 
       <div class="nav-label">Halaman</div>
       <div class="nav-group">
-        <a class="nav-link" href="#"><span class="ic">◎</span>Profil</a>
-        <a class="nav-link" href="#"><span class="ic">▥</span>Kalender</a>
-        <a class="nav-link" href="#"><span class="ic">？</span>FAQ</a>
+        <a class="nav-link" href="#" data-view="profil"><span class="ic">◎</span>Profil</a>
+        <a class="nav-link" href="#" data-view="kalender"><span class="ic">▥</span>Kalender</a>
+        <a class="nav-link" href="#" data-view="faq"><span class="ic">？</span>FAQ</a>
       </div>
 
       <div class="nav-label">Grafik &amp; Metrik</div>
       <div class="nav-group">
-        <a class="nav-link" href="#"><span class="ic">▲</span>Pekerjaan per Unit</a>
-        <a class="nav-link" href="#"><span class="ic">≈</span>Akumulasi Pekerjaan</a>
-        <a class="nav-link" href="#"><span class="ic">🗺</span>Peta Wilayah</a>
+        <a class="nav-link" href="#" data-view="metrik-unit"><span class="ic">▲</span>Pekerjaan per Unit</a>
+        <a class="nav-link" href="#" data-view="metrik-akumulasi"><span class="ic">≈</span>Akumulasi Pekerjaan</a>
+        <a class="nav-link" href="#" data-view="metrik-peta"><span class="ic">🗺</span>Peta Wilayah</a>
       </div>
 
       <div class="nav-group nav-group-footer">
@@ -82,45 +82,238 @@
     </header>
 
     <main class="content">
-      <div class="page-head">
-        <h1>DASHBOARD</h1>
-        <p id="welcomeMsg">Selamat datang. Memuat data…</p>
-      </div>
 
-      <!-- camera / device row -->
-      <section class="camera-row" id="cameraRow">
-        <div class="camera-placeholder">Belum ada data perangkat CCTV. Klik ikon ⚙ di kanan atas untuk memuat data.</div>
-      </section>
+      <!-- ============ VIEW: DASHBOARD ============ -->
+      <section class="view active" id="view-dashboard">
+        <div class="page-head">
+          <h1>DASHBOARD</h1>
+          <p id="welcomeMsg">Selamat datang. Memuat data…</p>
+        </div>
 
-      <!-- row 1: line chart + donut -->
-      <section class="grid-row grid-row-1">
-        <div class="panel panel-line">
-          <div class="panel-head">
-            <h2>Pekerjaan per Bulan</h2>
-            <span class="panel-sub" id="lineSub"></span>
+        <section class="camera-row" id="cameraRow">
+          <div class="camera-placeholder">Belum ada data perangkat CCTV. Klik ikon ⚙ di kanan atas untuk memuat data.</div>
+        </section>
+
+        <section class="grid-row grid-row-1">
+          <div class="panel panel-line">
+            <div class="panel-head">
+              <h2>Pekerjaan per Bulan</h2>
+              <span class="panel-sub" id="lineSub"></span>
+            </div>
+            <canvas id="lineChart" height="230"></canvas>
           </div>
-          <canvas id="lineChart" height="230"></canvas>
+          <div class="panel panel-donut">
+            <div class="panel-head"><h2>Distribusi Unit UP3</h2></div>
+            <canvas id="donutChart" height="230"></canvas>
+            <div class="donut-legend" id="donutLegend"></div>
+          </div>
+        </section>
+
+        <section class="grid-row grid-row-2">
+          <div class="panel panel-bar">
+            <div class="panel-head"><h2>Pekerjaan per Unit ULP</h2></div>
+            <canvas id="barChart" height="260"></canvas>
+          </div>
+          <div class="panel panel-recent">
+            <div class="panel-head"><h2>Aktivitas Terbaru</h2></div>
+            <div class="recent-list" id="recentList">
+              <div class="empty-mini">Belum ada data.</div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- ============ VIEW: TAMBAH PETUGAS ============ -->
+      <section class="view" id="view-petugas-tambah">
+        <div class="page-head">
+          <h1>TAMBAH PETUGAS</h1>
+          <p class="sub-static">Kelola daftar petugas lapangan beserta kontaknya.</p>
         </div>
-        <div class="panel panel-donut">
-          <div class="panel-head"><h2>Distribusi Unit UP3</h2></div>
-          <canvas id="donutChart" height="230"></canvas>
-          <div class="donut-legend" id="donutLegend"></div>
+        <div class="panel" style="max-width:520px; margin-bottom:18px;">
+          <div class="panel-head"><h2 id="petugasFormTitle">Tambah Petugas Baru</h2></div>
+          <form id="petugasForm" class="form-grid">
+            <input type="hidden" id="petugasEditId">
+            <label>Nama<input type="text" id="petugasNama" required placeholder="Nama lengkap"></label>
+            <label>Telepon / HP<input type="text" id="petugasTelepon" placeholder="08xx-xxxx-xxxx"></label>
+            <label>Email<input type="text" id="petugasEmail" placeholder="nama@email.com"></label>
+            <label>Unit ULP<input type="text" id="petugasUnit" placeholder="ULP Wua Wua"></label>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" id="petugasSubmitBtn">Simpan Petugas</button>
+              <button type="button" class="btn btn-ghost" id="petugasCancelEdit" style="display:none;">Batal Edit</button>
+            </div>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>Daftar Petugas</h2></div>
+          <div class="table-wrap"><table class="data-table" id="petugasTable">
+            <thead><tr><th>Nama</th><th>Telepon</th><th>Email</th><th>Unit</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table></div>
         </div>
       </section>
 
-      <!-- row 2: stacked bar + recent list -->
-      <section class="grid-row grid-row-2">
-        <div class="panel panel-bar">
-          <div class="panel-head"><h2>Pekerjaan per Unit ULP</h2></div>
-          <canvas id="barChart" height="260"></canvas>
+      <!-- ============ VIEW: INFO KONTAK ============ -->
+      <section class="view" id="view-petugas-kontak">
+        <div class="page-head">
+          <h1>INFO KONTAK</h1>
+          <p class="sub-static">Kontak seluruh petugas yang terdaftar.</p>
         </div>
-        <div class="panel panel-recent">
-          <div class="panel-head"><h2>Aktivitas Terbaru</h2></div>
-          <div class="recent-list" id="recentList">
-            <div class="empty-mini">Belum ada data.</div>
-          </div>
+        <div class="kontak-grid" id="kontakGrid">
+          <div class="empty-mini">Belum ada petugas terdaftar. Tambahkan lewat menu "Tambah Petugas".</div>
         </div>
       </section>
+
+      <!-- ============ VIEW: GRAFIK PETUGAS ============ -->
+      <section class="view" id="view-petugas-grafik">
+        <div class="page-head">
+          <h1>GRAFIK PETUGAS</h1>
+          <p class="sub-static">Jumlah pekerjaan tercatat per petugas lapangan (dari data CCTV).</p>
+        </div>
+        <div class="panel">
+          <canvas id="petugasChart" height="220"></canvas>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: DIREKTORI CCTV ============ -->
+      <section class="view" id="view-cctv-direktori">
+        <div class="page-head">
+          <h1>DIREKTORI CCTV</h1>
+          <p class="sub-static">Seluruh perangkat CCTV yang tercatat dalam data.</p>
+        </div>
+        <div class="panel">
+          <div class="table-wrap"><table class="data-table" id="direktoriTable">
+            <thead><tr><th>Nama Perangkat</th><th>Lokasi / Unit</th><th>Terakhir Ditangani</th><th>Total Pekerjaan</th><th>Dokumentasi Terakhir</th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: KELOLA DATA ============ -->
+      <section class="view" id="view-data-kelola">
+        <div class="page-head">
+          <h1>KELOLA DATA</h1>
+          <p class="sub-static">Semua baris data pekerjaan dari sumber data.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head-row">
+            <input type="text" id="kelolaSearch" placeholder="Cari di tabel ini…">
+            <button class="btn btn-ghost btn-sm" id="kelolaExportBtn">⬇ Export CSV</button>
+          </div>
+          <div class="table-wrap table-wrap-tall"><table class="data-table" id="kelolaTable">
+            <thead><tr><th>Tanggal</th><th>UP3</th><th>ULP</th><th>Perangkat</th><th>Pekerjaan</th><th>Lokasi</th><th>Petugas</th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: REKAP LAPORAN ============ -->
+      <section class="view" id="view-laporan-rekap">
+        <div class="page-head">
+          <h1>REKAP LAPORAN</h1>
+          <p class="sub-static">Ringkasan jumlah pekerjaan per kategori untuk periode tertentu.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head-row">
+            <select id="rekapBulan"></select>
+            <button class="btn btn-ghost btn-sm" id="rekapExportBtn">⬇ Export CSV</button>
+          </div>
+          <div class="table-wrap"><table class="data-table" id="rekapTable">
+            <thead><tr><th>Kategori Pekerjaan</th><th>Jumlah</th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: PROFIL ============ -->
+      <section class="view" id="view-profil">
+        <div class="page-head">
+          <h1>PROFIL</h1>
+          <p class="sub-static">Ubah nama dan peran yang tampil di sidebar.</p>
+        </div>
+        <div class="panel" style="max-width:420px;">
+          <form id="profilForm" class="form-grid">
+            <label>Nama<input type="text" id="profilNama" placeholder="Admin"></label>
+            <label>Peran<input type="text" id="profilRole" placeholder="K3 Supervisor"></label>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Simpan Profil</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: KALENDER ============ -->
+      <section class="view" id="view-kalender">
+        <div class="page-head">
+          <h1>KALENDER</h1>
+          <p class="sub-static">Jumlah pekerjaan tercatat per tanggal.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head-row">
+            <button class="icon-btn" id="calPrev">←</button>
+            <span class="panel-sub" id="calLabel" style="font-size:13px;"></span>
+            <button class="icon-btn" id="calNext">→</button>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+        <div class="panel" style="margin-top:16px;">
+          <div class="panel-head"><h2 id="calDayTitle">Pilih tanggal untuk melihat detail</h2></div>
+          <div class="recent-list" id="calDayList"><div class="empty-mini">—</div></div>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: FAQ ============ -->
+      <section class="view" id="view-faq">
+        <div class="page-head">
+          <h1>FAQ</h1>
+          <p class="sub-static">Pertanyaan yang sering ditanyakan seputar dashboard ini.</p>
+        </div>
+        <div class="panel">
+          <div class="faq-list" id="faqList"></div>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: PEKERJAAN PER UNIT ============ -->
+      <section class="view" id="view-metrik-unit">
+        <div class="page-head">
+          <h1>PEKERJAAN PER UNIT</h1>
+          <p class="sub-static">Rincian jumlah pekerjaan per Unit ULP, dipecah per kategori.</p>
+        </div>
+        <div class="panel" style="margin-bottom:16px;">
+          <canvas id="unitChart" height="260"></canvas>
+        </div>
+        <div class="panel">
+          <div class="table-wrap"><table class="data-table" id="unitTable">
+            <thead><tr><th>Unit ULP</th><th>Total Pekerjaan</th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: AKUMULASI PEKERJAAN ============ -->
+      <section class="view" id="view-metrik-akumulasi">
+        <div class="page-head">
+          <h1>AKUMULASI PEKERJAAN</h1>
+          <p class="sub-static">Jumlah kumulatif pekerjaan dari waktu ke waktu.</p>
+        </div>
+        <div class="panel">
+          <canvas id="akumulasiChart" height="260"></canvas>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: PETA WILAYAH ============ -->
+      <section class="view" id="view-metrik-peta">
+        <div class="page-head">
+          <h1>PETA WILAYAH</h1>
+          <p class="sub-static">Daftar wilayah kerja. Isi koordinat lat/long untuk mengaktifkan peta nanti.</p>
+        </div>
+        <div class="panel">
+          <div class="table-wrap"><table class="data-table" id="petaTable">
+            <thead><tr><th>Lokasi / Unit ULP</th><th>Jumlah Pekerjaan</th><th>Latitude</th><th>Longitude</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+        </div>
+      </section>
+
     </main>
   </div>
 
