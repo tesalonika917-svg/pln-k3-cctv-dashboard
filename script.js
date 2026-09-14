@@ -641,7 +641,7 @@ function renderKelolaTable(source){
   if(!sorted.length){ tbody.innerHTML = '<tr><td colspan="7" class="empty-mini">Belum ada data.</td></tr>'; return; }
   tbody.innerHTML = sorted.map(r=>`
     <tr>
-      <td>${fmtDate(r._date)}</td>
+      <td>${fmtDate(r._date, r.timestamp)}</td>
       <td>${esc(r.up3)||'—'}</td>
       <td>${esc(r.ulp)||'—'}</td>
       <td>${esc(r.perangkat)||'—'}</td>
