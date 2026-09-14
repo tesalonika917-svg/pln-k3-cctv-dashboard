@@ -366,23 +366,46 @@
 
             <div class="panel">
 
-                <div class="panel-head-row">
+                ```html
+<div class="panel-head-row">
 
-                    <input
-                        type="text"
-                        id="kelolaSearch"
-                        placeholder="Cari di tabel ini..."
-                    >
+    <input
+        type="text"
+        id="kelolaSearch"
+        placeholder="Cari di tabel ini..."
+    >
 
+    <button
+        class="btn btn-ghost btn-sm"
+        id="kelolaExportBtn"
+    >
+        ⬇ Export CSV
+    </button>
 
-                    <button
-                        class="btn btn-ghost btn-sm"
-                        id="kelolaExportBtn"
-                    >
-                        ⬇ Export CSV
-                    </button>
+</div>
 
-                </div>
+<!-- JUMLAH PEKERJA -->
+<div class="worker-summary">
+
+    <div class="worker-summary-icon">
+        👷
+    </div>
+
+    <div class="worker-summary-text">
+
+        <span>
+            Jumlah Pekerja
+        </span>
+
+        <strong id="jumlahPekerja">
+            0
+        </strong>
+
+    </div>
+
+</div>
+```
+
 
 
                 <div class="table-wrap table-wrap-tall">
