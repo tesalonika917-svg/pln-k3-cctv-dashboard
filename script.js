@@ -53,7 +53,16 @@ function parseTimestamp(raw){
 }
 function fmtDate(d){
   if(!d) return '—';
-  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+
+  const tanggal = String(d.getDate()).padStart(2,'0');
+  const bulan = String(d.getMonth()+1).padStart(2,'0');
+  const tahun = d.getFullYear();
+
+  const jam = String(d.getHours()).padStart(2,'0');
+  const menit = String(d.getMinutes()).padStart(2,'0');
+  const detik = String(d.getSeconds()).padStart(2,'0');
+
+  return `${tanggal}/${bulan}/${tahun} ${jam}:${menit}:${detik}`;
 }
 function isSameDay(a,b){
   return a && b && a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
