@@ -3,35 +3,48 @@
 <html lang="id">
 
 <head>
+
     <meta charset="UTF-8">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
 
-    <title>Logsheet Monitoring CCTV Online UID SSTB</title>
+    <title>
+        Logsheet Monitoring CCTV Online UID SSTB
+    </title>
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet"
+          href="style.css">
 
     <!-- Papa Parse -->
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">
+    </script>
 
     <!-- SheetJS -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
+    </script>
 
     <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chart.js">
+    </script>
+
 </head>
+
 
 <body>
 
 <div class="app">
 
+
     <!-- =====================================================
          SIDEBAR
     ====================================================== -->
+
     <aside class="sidebar">
+
 
         <div class="sidebar-brand">
 
@@ -39,9 +52,16 @@
                 CCTV
             </div>
 
-            <div>
-                <strong>LOGSHEET</strong>
-                <small>UID SSTB</small>
+            <div class="brand-text">
+
+                <strong>
+                    LOGSHEET
+                </strong>
+
+                <small>
+                    UID SSTB
+                </small>
+
             </div>
 
         </div>
@@ -49,17 +69,22 @@
 
         <nav class="sidebar-nav">
 
+
             <div class="nav-section">
                 Dashboard
             </div>
 
-            <a
-                href="#"
-                class="nav-link active"
-                data-view="dashboard"
-            >
-                <span class="ic">▦</span>
+
+            <a href="#"
+               class="nav-link active"
+               data-view="dashboard">
+
+                <span class="ic">
+                    ▦
+                </span>
+
                 Dashboard
+
             </a>
 
 
@@ -67,54 +92,74 @@
                 Manajemen Perangkat
             </div>
 
-            <a
-                href="#"
-                class="nav-link"
-                data-view="cctv-direktori"
-            >
-                <span class="ic">▤</span>
+
+            <a href="#"
+               class="nav-link"
+               data-view="cctv-direktori">
+
+                <span class="ic">
+                    ▤
+                </span>
+
                 Direktori CCTV
+
             </a>
 
-            <a
-                href="#"
-                class="nav-link"
-                data-view="pekerjaan-log"
-            >
-                <span class="ic">▦</span>
+
+            <a href="#"
+               class="nav-link"
+               data-view="pekerjaan-log">
+
+                <span class="ic">
+                    ▦
+                </span>
+
                 Log Pekerjaan
+
             </a>
 
-            <a
-                href="#"
-                class="nav-link"
-                data-view="laporan-rekap"
-            >
-                <span class="ic">▧</span>
+
+            <a href="#"
+               class="nav-link"
+               data-view="laporan-rekap">
+
+                <span class="ic">
+                    ▧
+                </span>
+
                 Rekap Laporan
+
             </a>
+
 
         </nav>
 
 
         <div class="sidebar-footer">
-            <small>
-                Monitoring CCTV Online
-            </small>
+
+            Monitoring CCTV Online
+
         </div>
+
 
     </aside>
 
 
+
     <!-- =====================================================
-         MAIN
+         MAIN CONTENT
     ====================================================== -->
+
     <main class="main">
 
-        <!-- HEADER -->
+
+        <!-- TOPBAR -->
+
         <header class="topbar">
 
+
             <div>
+
                 <h2 id="topTitle">
                     Dashboard
                 </h2>
@@ -122,14 +167,16 @@
                 <p id="topSubtitle">
                     Monitoring CCTV UID SSTB
                 </p>
+
             </div>
+
 
             <div class="top-status">
 
                 <span
                     class="status-dot"
-                    id="connectionDot"
-                ></span>
+                    id="connectionDot">
+                </span>
 
                 <span id="connectionText">
                     Menghubungkan...
@@ -137,16 +184,19 @@
 
             </div>
 
+
         </header>
 
 
+
         <!-- =================================================
-             VIEW DASHBOARD
+             DASHBOARD
         ================================================== -->
+
         <section
             class="view active"
-            id="view-dashboard"
-        >
+            id="view-dashboard">
+
 
             <div class="page-head">
 
@@ -163,6 +213,7 @@
 
             <div class="stats-grid">
 
+
                 <div class="stat-card">
 
                     <span class="stat-label">
@@ -171,8 +222,7 @@
 
                     <strong
                         class="stat-value"
-                        id="totalData"
-                    >
+                        id="totalData">
                         0
                     </strong>
 
@@ -187,8 +237,7 @@
 
                     <strong
                         class="stat-value"
-                        id="totalCCTV"
-                    >
+                        id="totalCCTV">
                         0
                     </strong>
 
@@ -198,13 +247,12 @@
                 <div class="stat-card">
 
                     <span class="stat-label">
-                        Pekerjaan
+                        Jenis Pekerjaan
                     </span>
 
                     <strong
                         class="stat-value"
-                        id="totalPekerjaan"
-                    >
+                        id="totalPekerjaan">
                         0
                     </strong>
 
@@ -219,71 +267,105 @@
 
                     <strong
                         class="stat-value"
-                        id="lastUpdate"
-                    >
+                        id="lastUpdate">
                         -
                     </strong>
 
                 </div>
 
+
             </div>
+
 
 
             <div class="panel">
 
+
                 <div class="panel-head-row">
 
+
                     <div>
+
                         <h3>
                             Data Terbaru
                         </h3>
 
                         <p class="muted">
-                            Data pekerjaan terbaru dari spreadsheet.
+                            Data pekerjaan terbaru dari Spreadsheet.
                         </p>
+
                     </div>
+
 
                 </div>
 
 
                 <div class="table-wrap">
 
+
                     <table
                         class="data-table"
-                        id="dashboardTable"
-                    >
+                        id="dashboardTable">
+
 
                         <thead>
 
                             <tr>
-                                <th>Tanggal</th>
-                                <th>UP3</th>
-                                <th>ULP</th>
-                                <th>Perangkat</th>
-                                <th>Pekerjaan</th>
-                                <th>Petugas</th>
+
+                                <th>
+                                    Tanggal
+                                </th>
+
+                                <th>
+                                    UP3
+                                </th>
+
+                                <th>
+                                    ULP
+                                </th>
+
+                                <th>
+                                    Perangkat
+                                </th>
+
+                                <th>
+                                    Pekerjaan
+                                </th>
+
+                                <th>
+                                    Petugas
+                                </th>
+
                             </tr>
 
                         </thead>
 
-                        <tbody></tbody>
+
+                        <tbody>
+                        </tbody>
+
 
                     </table>
 
+
                 </div>
 
+
             </div>
+
 
         </section>
 
 
+
         <!-- =================================================
-             VIEW DIREKTORI CCTV
+             DIREKTORI CCTV
         ================================================== -->
+
         <section
             class="view"
-            id="view-cctv-direktori"
-        >
+            id="view-cctv-direktori">
+
 
             <div class="page-head">
 
@@ -300,56 +382,89 @@
 
             <div class="panel">
 
+
                 <div class="panel-head-row">
+
 
                     <input
                         type="text"
                         id="direktoriSearch"
-                        placeholder="Cari CCTV..."
-                    >
+                        placeholder="Cari CCTV...">
+
 
                 </div>
 
 
                 <div class="table-wrap table-wrap-tall">
 
+
                     <table
                         class="data-table"
-                        id="direktoriTable"
-                    >
+                        id="direktoriTable">
+
 
                         <thead>
 
                             <tr>
-                                <th>Tanggal</th>
-                                <th>UP3</th>
-                                <th>ULP</th>
-                                <th>Perangkat</th>
-                                <th>Lokasi</th>
-                                <th>Petugas</th>
-                                <th>Dokumentasi</th>
+
+                                <th>
+                                    Tanggal
+                                </th>
+
+                                <th>
+                                    UP3
+                                </th>
+
+                                <th>
+                                    ULP
+                                </th>
+
+                                <th>
+                                    Perangkat
+                                </th>
+
+                                <th>
+                                    Lokasi
+                                </th>
+
+                                <th>
+                                    Petugas
+                                </th>
+
+                                <th>
+                                    Dokumentasi
+                                </th>
+
                             </tr>
 
                         </thead>
 
-                        <tbody></tbody>
+
+                        <tbody>
+                        </tbody>
+
 
                     </table>
 
+
                 </div>
 
+
             </div>
+
 
         </section>
 
 
+
         <!-- =================================================
-             VIEW LOG PEKERJAAN
+             LOG PEKERJAAN
         ================================================== -->
+
         <section
             class="view"
-            id="view-pekerjaan-log"
-        >
+            id="view-pekerjaan-log">
+
 
             <div class="page-head">
 
@@ -366,74 +481,105 @@
 
             <div class="panel">
 
-                ```html
-<div class="panel-head-row">
 
-    <input
-        type="text"
-        id="kelolaSearch"
-        placeholder="Cari di tabel ini..."
-    >
+                <!-- SEARCH + EXPORT -->
 
-    <button
-        class="btn btn-ghost btn-sm"
-        id="kelolaExportBtn"
-    >
-        ⬇ Export CSV
-    </button>
-
-</div>
-
-<!-- JUMLAH PEKERJA -->
-<div class="worker-summary">
-
-    <div class="worker-summary-icon">
-        👷
-    </div>
-
-    <div class="worker-summary-text">
-
-        <span>
-            Jumlah Pekerja
-        </span>
-
-        <strong id="jumlahPekerja">
-            0
-        </strong>
-
-    </div>
-
-</div>
-```
+                <div class="panel-head-row">
 
 
+                    <input
+                        type="text"
+                        id="kelolaSearch"
+                        placeholder="Cari di tabel ini...">
+
+
+                    <button
+                        class="btn btn-ghost btn-sm"
+                        id="kelolaExportBtn">
+
+                        ⬇ Export CSV
+
+                    </button>
+
+
+                </div>
+
+
+
+                <!-- JUMLAH PEKERJA -->
+
+                <div class="worker-summary">
+
+
+                    <div class="worker-summary-icon">
+
+                        👷
+
+                    </div>
+
+
+                    <div class="worker-summary-text">
+
+                        <span>
+                            Jumlah Pekerja
+                        </span>
+
+                        <strong id="jumlahPekerja">
+                            0
+                        </strong>
+
+                    </div>
+
+
+                </div>
+
+
+
+                <!-- TABEL -->
 
                 <div class="table-wrap table-wrap-tall">
 
+
                     <table
                         class="data-table"
-                        id="kelolaTable"
-                    >
+                        id="kelolaTable">
+
 
                         <thead>
 
                             <tr>
 
-                                <th>Tanggal</th>
+                                <th>
+                                    Tanggal
+                                </th>
 
-                                <th>UP3</th>
+                                <th>
+                                    UP3
+                                </th>
 
-                                <th>ULP</th>
+                                <th>
+                                    ULP
+                                </th>
 
-                                <th>Perangkat</th>
+                                <th>
+                                    Perangkat
+                                </th>
 
-                                <th>Pekerjaan</th>
+                                <th>
+                                    Pekerjaan
+                                </th>
 
-                                <th>Lokasi</th>
+                                <th>
+                                    Lokasi
+                                </th>
 
-                                <th>Petugas</th>
+                                <th>
+                                    Petugas
+                                </th>
 
-                                <th>Dokumentasi</th>
+                                <th>
+                                    Dokumentasi
+                                </th>
 
                             </tr>
 
@@ -446,8 +592,8 @@
 
                                 <td
                                     colspan="8"
-                                    class="empty-cell"
-                                >
+                                    class="empty-cell">
+
                                     Memuat data...
 
                                 </td>
@@ -456,22 +602,28 @@
 
                         </tbody>
 
+
                     </table>
+
 
                 </div>
 
+
             </div>
+
 
         </section>
 
 
+
         <!-- =================================================
-             VIEW REKAP
+             REKAP
         ================================================== -->
+
         <section
             class="view"
-            id="view-laporan-rekap"
-        >
+            id="view-laporan-rekap">
+
 
             <div class="page-head">
 
@@ -488,16 +640,16 @@
 
             <div class="stats-grid">
 
+
                 <div class="stat-card">
 
                     <span class="stat-label">
-                        Total Pekerjaan
+                        Jenis Pekerjaan
                     </span>
 
                     <strong
                         class="stat-value"
-                        id="rekapPekerjaan"
-                    >
+                        id="rekapPekerjaan">
                         0
                     </strong>
 
@@ -507,13 +659,12 @@
                 <div class="stat-card">
 
                     <span class="stat-label">
-                        Total UP3
+                        UP3
                     </span>
 
                     <strong
                         class="stat-value"
-                        id="rekapUP3"
-                    >
+                        id="rekapUP3">
                         0
                     </strong>
 
@@ -523,33 +674,34 @@
                 <div class="stat-card">
 
                     <span class="stat-label">
-                        Total ULP
+                        ULP
                     </span>
 
                     <strong
                         class="stat-value"
-                        id="rekapULP"
-                    >
+                        id="rekapULP">
                         0
                     </strong>
 
                 </div>
+
 
             </div>
 
+
         </section>
 
+
     </main>
+
 
 </div>
 
 
-<!-- =====================================================
-     SCRIPT
-====================================================== -->
 
 <script src="script.js"></script>
 
 </body>
+
 </html>
 ```
