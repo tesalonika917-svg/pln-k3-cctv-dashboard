@@ -1,128 +1,292 @@
 /* =========================================================
-   PLN K3 · CCTV Monitoring Dashboard
-   Semua data diproses di browser (client-side only).
+   PLN K3 · CCTV MONITORING DASHBOARD
+   LOG PEKERJAAN + DOKUMENTASI GAMBAR
    ========================================================= */
 
-const HARI_ID = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
-const BULAN_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-
-const STORAGE_ROWS_KEY = 'plnk3-dashboard-rows';
-const STORAGE_URL_KEY  = 'plnk3-dashboard-source-url';
-const STORAGE_THEME_KEY = 'plnk3-dashboard-theme';
-const STORAGE_PETUGAS_KEY = 'plnk3-petugas-list';
-const STORAGE_PROFILE_KEY = 'plnk3-profile';
-const STORAGE_WILAYAH_KEY = 'plnk3-wilayah-coords';
-
-const CATEGORY_PALETTE = ['#f0b93f', '#e0704f', '#8b7fd6', '#3fae8f', '#5aa4f5', '#e3b98a'];
 
 /* =========================================================
-   ISI LINK SUMBER DATA DI SINI
-   (link CSV hasil "Publish to web" dari Google Sheet,
-    atau URL Google Apps Script Web App yang return JSON)
+   KONSTANTA
    ========================================================= */
-const DEFAULT_SOURCE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQWRM7E3rtMsJVWf9z1cntdblP4nSP9p0QCC6DeEbVt_3MHbjicUDgP2AsgLPV-NaNAYH3YZfDwFXhI/pub?output=csv';
+
+const HARI_ID = [
+  'Minggu',
+  'Senin',
+  'Selasa',
+  'Rabu',
+  'Kamis',
+  'Jumat',
+  'Sabtu'
+];
+
+
+const BULAN_ID = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'Mei',
+  'Jun',
+  'Jul',
+  'Agu',
+  'Sep',
+  'Okt',
+  'Nov',
+  'Des'
+];
+
+
+const STORAGE_ROWS_KEY =
+  'plnk3-dashboard-rows';
+
+
+const STORAGE_URL_KEY =
+  'plnk3-dashboard-source-url';
+
+
+const STORAGE_THEME_KEY =
+  'plnk3-dashboard-theme';
+
+
+const STORAGE_PETUGAS_KEY =
+  'plnk3-petugas-list';
+
+
+const STORAGE_PROFILE_KEY =
+  'plnk3-profile';
+
+
+const STORAGE_WILAYAH_KEY =
+  'plnk3-wilayah-coords';
+
+
+const CATEGORY_PALETTE = [
+  '#f0b93f',
+  '#e0704f',
+  '#8b7fd6',
+  '#3fae8f',
+  '#5aa4f5',
+  '#e3b98a'
+];
+
+
+/* =========================================================
+   SUMBER DATA DEFAULT
+   ========================================================= */
+
+const DEFAULT_SOURCE_URL =
+'https://docs.google.com/spreadsheets/d/e/2PACX-1vQWRM7E3rtMsJVWf9z1cntdblP4nSP9p0QCC6DeEbVt_3MHbjicUDgP2AsgLPV-NaNAYH3YZfDwFXhI/pub?output=csv';
+
+
+/* =========================================================
+   VARIABLE GLOBAL
+   ========================================================= */
 
 let rows = [];
+
 let categoryColor = {};
-let lineChart, donutChart, barChart, petugasChart, unitChart, akumulasiChart;
+
+let lineChart;
+let donutChart;
+let barChart;
+let petugasChart;
+let unitChart;
+let akumulasiChart;
+
 let autoRefreshTimer = null;
+
 let calCursor = new Date();
 
-/* ---------------- header normalization ---------------- */
+
+/* =========================================================
+   HEADER NORMALIZATION
+   ========================================================= */
+
 const HEADER_MAP = {
-  'timestamp':'timestamp',
-  'tanggal':'timestamp',
-  'waktu':'timestamp',
 
-  'unit up3':'up3',
-  'up3':'up3',
+  'timestamp':
+    'timestamp',
 
-  'unit ulp':'ulp',
-  'ulp':'ulp',
+  'tanggal':
+    'timestamp',
 
-  'nama perangkat cctv':'perangkat',
-  'perangkat cctv':'perangkat',
-  'nama perangkat':'perangkat',
+  'waktu':
+    'timestamp',
 
-  'nama pekerjaan':'pekerjaan',
-  'pekerjaan':'pekerjaan',
 
-  'lokasi pekerjaan':'lokasi',
-  'lokasi':'lokasi',
+  'unit up3':
+    'up3',
 
-  'petugas pelaksana di lapangan':'petugas',
-  'petugas pelaksana':'petugas',
-  'petugas':'petugas',
+  'up3':
+    'up3',
 
-  'dokumentasi cctv':'dokumentasi',
-  'dokumentasi':'dokumentasi',
-  'link':'dokumentasi',
 
-  'deskripsi':'deskripsi',
-  'keterangan':'deskripsi',
-  'description':'deskripsi'
+  'unit ulp':
+    'ulp',
+
+  'ulp':
+    'ulp',
+
+
+  'nama perangkat cctv':
+    'perangkat',
+
+  'perangkat cctv':
+    'perangkat',
+
+  'nama perangkat':
+    'perangkat',
+
+
+  'nama pekerjaan':
+    'pekerjaan',
+
+  'pekerjaan':
+    'pekerjaan',
+
+
+  'lokasi pekerjaan':
+    'lokasi',
+
+  'lokasi':
+    'lokasi',
+
+
+  'petugas pelaksana di lapangan':
+    'petugas',
+
+  'petugas pelaksana':
+    'petugas',
+
+  'petugas':
+    'petugas',
+
+
+  'dokumentasi cctv':
+    'dokumentasi',
+
+  'dokumentasi':
+    'dokumentasi',
+
+  'link':
+    'dokumentasi',
+
+
+  'deskripsi':
+    'deskripsi',
+
+  'keterangan':
+    'deskripsi',
+
+  'description':
+    'deskripsi'
+
 };
 
 
 /* =========================================================
    PARSE TIMESTAMP
    ========================================================= */
+
 function parseTimestamp(raw){
-  if(!raw) return null;
 
-  raw = String(raw).trim();
+  if(!raw)
+    return null;
 
-  // Format: DD/MM/YYYY HH:MM:SS
-  let m = raw.match(
-    /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/
-  );
+
+  raw =
+    String(raw).trim();
+
+
+  /* DD/MM/YYYY HH:MM:SS */
+
+  let m =
+    raw.match(
+      /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/
+    );
+
 
   if(m){
-    const [,d,mo,y,h,mi,s] = m;
+
+    const [
+      ,
+      d,
+      mo,
+      y,
+      h,
+      mi,
+      s
+    ] = m;
+
 
     return new Date(
       +y,
-      +mo-1,
+      +mo - 1,
       +d,
       +(h || 0),
       +(mi || 0),
       +(s || 0)
     );
+
   }
 
-  // Format: YYYY-MM-DD HH:MM:SS
-  m = raw.match(
-    /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/
-  );
+
+  /* YYYY-MM-DD HH:MM:SS */
+
+  m =
+    raw.match(
+      /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/
+    );
+
 
   if(m){
-    const [,y,mo,d,h,mi,s] = m;
+
+    const [
+      ,
+      y,
+      mo,
+      d,
+      h,
+      mi,
+      s
+    ] = m;
+
 
     return new Date(
       +y,
-      +mo-1,
+      +mo - 1,
       +d,
       +(h || 0),
       +(mi || 0),
       +(s || 0)
     );
+
   }
 
-  const d = new Date(raw);
 
-  return isNaN(d) ? null : d;
+  const d =
+    new Date(raw);
+
+
+  return isNaN(d)
+    ? null
+    : d;
+
 }
 
 
 /* =========================================================
    FORMAT TANGGAL + JAM
    ========================================================= */
-function fmtDate(d, rawTimestamp = null){
+
+function fmtDate(
+  d,
+  rawTimestamp = null
+){
 
   /*
-   * PENTING:
-   * Gunakan Timestamp asli dari Google Sheets terlebih dahulu.
-   * Ini mencegah GitHub Pages/browser menghilangkan jam.
+   * Timestamp asli diprioritaskan.
+   * Tujuannya agar jam tidak hilang ketika
+   * dijalankan di GitHub Pages.
    */
 
   if(
@@ -131,97 +295,144 @@ function fmtDate(d, rawTimestamp = null){
     String(rawTimestamp).trim() !== ''
   ){
 
-    const raw = String(rawTimestamp).trim();
+    const raw =
+      String(rawTimestamp).trim();
 
-    // Format:
-    // DD/MM/YYYY HH:MM:SS
-    let m = raw.match(
-      /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/
-    );
+
+    /* DD/MM/YYYY HH:MM:SS */
+
+    let m =
+      raw.match(
+        /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/
+      );
+
 
     if(m){
 
-      const dd = String(m[1]).padStart(2, '0');
-      const mm = String(m[2]).padStart(2, '0');
-      const yyyy = m[3];
+      const dd =
+        String(m[1]).padStart(2,'0');
 
-      const hh = String(m[4]).padStart(2, '0');
-      const mi = String(m[5]).padStart(2, '0');
-      const ss = String(m[6] || '00').padStart(2, '0');
+      const mm =
+        String(m[2]).padStart(2,'0');
+
+      const yyyy =
+        m[3];
+
+      const hh =
+        String(m[4]).padStart(2,'0');
+
+      const mi =
+        String(m[5]).padStart(2,'0');
+
+      const ss =
+        String(m[6] || '00').padStart(2,'0');
+
 
       return `${dd}/${mm}/${yyyy} ${hh}:${mi}:${ss}`;
+
     }
 
 
-    // Format:
-    // YYYY-MM-DD HH:MM:SS
-    // YYYY-MM-DDTHH:MM:SS
-    m = raw.match(
-      /^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/
-    );
+    /* YYYY-MM-DD HH:MM:SS */
+
+    m =
+      raw.match(
+        /^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/
+      );
+
 
     if(m){
 
-      const yyyy = m[1];
-      const mm = String(m[2]).padStart(2, '0');
-      const dd = String(m[3]).padStart(2, '0');
+      const yyyy =
+        m[1];
 
-      const hh = String(m[4]).padStart(2, '0');
-      const mi = String(m[5]).padStart(2, '0');
-      const ss = String(m[6] || '00').padStart(2, '0');
+      const mm =
+        String(m[2]).padStart(2,'0');
+
+      const dd =
+        String(m[3]).padStart(2,'0');
+
+      const hh =
+        String(m[4]).padStart(2,'0');
+
+      const mi =
+        String(m[5]).padStart(2,'0');
+
+      const ss =
+        String(m[6] || '00').padStart(2,'0');
+
 
       return `${dd}/${mm}/${yyyy} ${hh}:${mi}:${ss}`;
+
     }
 
-    /*
-     * Jika format Timestamp tidak dikenali,
-     * tampilkan nilai asli dari Spreadsheet.
-     */
+
     return raw;
+
   }
 
 
-  /*
-   * FALLBACK:
-   * Jika Timestamp hanya tersedia sebagai objek Date.
-   */
-  if(!d || isNaN(d.getTime())){
+  if(
+    !d ||
+    isNaN(d.getTime())
+  ){
+
     return '—';
+
   }
+
 
   const tanggal =
-    String(d.getDate()).padStart(2, '0');
+    String(d.getDate()).padStart(2,'0');
 
   const bulan =
-    String(d.getMonth() + 1).padStart(2, '0');
+    String(d.getMonth()+1).padStart(2,'0');
 
   const tahun =
     d.getFullYear();
 
   const jam =
-    String(d.getHours()).padStart(2, '0');
+    String(d.getHours()).padStart(2,'0');
 
   const menit =
-    String(d.getMinutes()).padStart(2, '0');
+    String(d.getMinutes()).padStart(2,'0');
 
   const detik =
-    String(d.getSeconds()).padStart(2, '0');
+    String(d.getSeconds()).padStart(2,'0');
+
 
   return `${tanggal}/${bulan}/${tahun} ${jam}:${menit}:${detik}`;
+
 }
 
+
+/* =========================================================
+   CEK HARI
+   ========================================================= */
 
 function isSameDay(a,b){
+
   return a &&
          b &&
-         a.getFullYear()===b.getFullYear() &&
-         a.getMonth()===b.getMonth() &&
-         a.getDate()===b.getDate();
+         a.getFullYear() === b.getFullYear() &&
+         a.getMonth() === b.getMonth() &&
+         a.getDate() === b.getDate();
+
 }
 
 
+/* =========================================================
+   ESCAPE HTML
+   ========================================================= */
+
 function esc(s){
-  if(s===undefined || s===null) return '';
+
+  if(
+    s === undefined ||
+    s === null
+  )
+    return '';
+
 
   return String(s).replace(
     /[&<>"']/g,
@@ -233,93 +444,148 @@ function esc(s){
       "'":'&#39;'
     }[c])
   );
+
 }
 
+
+/* =========================================================
+   ID
+   ========================================================= */
 
 function uid(){
+
   return 'id' +
     Date.now().toString(36) +
-    Math.random().toString(36).slice(2,7);
+    Math.random()
+      .toString(36)
+      .slice(2,7);
+
 }
 
 
-/* ---------------- normalize rows ---------------- */
+/* =========================================================
+   NORMALIZE ROWS
+   ========================================================= */
 
 function normalizeRows(raw){
 
-  if(!raw || !raw.length) return [];
+  if(
+    !raw ||
+    !raw.length
+  )
+    return [];
 
-  const headerRow = Object.keys(raw[0]);
+
+  const headerRow =
+    Object.keys(raw[0]);
+
 
   const keyFor = {};
+
 
   headerRow.forEach(h=>{
 
     const clean =
       String(h)
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g,' ');
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g,' ');
+
 
     keyFor[h] =
       HEADER_MAP[clean] || null;
+
   });
 
 
-  return raw.map(r=>{
+  return raw
+    .map(r=>{
 
-    const o = {};
+      const o = {};
 
-    headerRow.forEach(h=>{
 
-      const k = keyFor[h];
+      headerRow.forEach(h=>{
 
-      if(k){
-        o[k] =
-          (r[h] ?? '')
-          .toString()
-          .trim();
-      }
+        const k =
+          keyFor[h];
 
-    });
 
-    o._date = parseTimestamp(o.timestamp);
+        if(k){
 
-    return o;
+          o[k] =
+            (r[h] ?? '')
+              .toString()
+              .trim();
 
-  }).filter(o =>
-    o._date ||
-    o.pekerjaan ||
-    o.up3
-  );
+        }
+
+      });
+
+
+      o._date =
+        parseTimestamp(
+          o.timestamp
+        );
+
+
+      return o;
+
+    })
+    .filter(o =>
+      o._date ||
+      o.pekerjaan ||
+      o.up3
+    );
+
 }
 
 
-/* ---------------- fetching ---------------- */
+/* =========================================================
+   FETCH DATA
+   ========================================================= */
 
 async function fetchAndParse(url){
 
-  const res = await fetch(url);
+  const res =
+    await fetch(url);
+
 
   if(!res.ok){
-    throw new Error('HTTP ' + res.status);
+
+    throw new Error(
+      'HTTP ' + res.status
+    );
+
   }
 
-  const text = await res.text();
 
-  const trimmed = text.trim();
+  const text =
+    await res.text();
+
+
+  const trimmed =
+    text.trim();
+
 
   if(
     trimmed.startsWith('[') ||
     trimmed.startsWith('{')
   ){
 
-    const json = JSON.parse(trimmed);
+    const json =
+      JSON.parse(trimmed);
+
 
     return Array.isArray(json)
       ? json
-      : (json.data || json.rows || []);
+      : (
+          json.data ||
+          json.rows ||
+          []
+        );
+
   }
+
 
   return Papa.parse(
     text,
@@ -328,27 +594,52 @@ async function fetchAndParse(url){
       skipEmptyLines:true
     }
   ).data;
+
 }
 
 
-/* ---------------- ingest ---------------- */
+/* =========================================================
+   STATUS
+   ========================================================= */
 
-function setStatus(msg, type){
+function setStatus(
+  msg,
+  type
+){
 
   const el =
-    document.getElementById('statusMsg');
+    document.getElementById(
+      'statusMsg'
+    );
 
-  el.textContent = msg;
+
+  if(!el)
+    return;
+
+
+  el.textContent =
+    msg;
+
 
   el.className =
-    'drawer-status ' + (type||'');
+    'drawer-status ' +
+    (type || '');
+
 }
 
 
-function ingest(rawRows, label){
+/* =========================================================
+   INGEST
+   ========================================================= */
+
+function ingest(
+  rawRows,
+  label
+){
 
   const norm =
     normalizeRows(rawRows);
+
 
   if(!norm.length){
 
@@ -357,25 +648,34 @@ function ingest(rawRows, label){
       'err'
     );
 
+
     return;
+
   }
 
-  rows = norm;
+
+  rows =
+    norm;
+
 
   setStatus(
     `Berhasil memuat ${rows.length} baris dari ${label}.`,
     'ok'
   );
 
+
   persistRows();
 
   assignCategoryColors();
 
   renderAll();
+
 }
 
 
-/* ---------------- persistence ---------------- */
+/* =========================================================
+   LOCAL STORAGE DATA
+   ========================================================= */
 
 function persistRows(){
 
@@ -385,16 +685,20 @@ function persistRows(){
       STORAGE_ROWS_KEY,
       JSON.stringify(
         rows.map(r=>({
+
           ...r,
+
           _date:
             r._date
               ? r._date.toISOString()
               : null
+
         }))
       )
     );
 
   }catch(e){}
+
 }
 
 
@@ -403,43 +707,59 @@ function restoreRows(){
   try{
 
     const raw =
-      localStorage.getItem(STORAGE_ROWS_KEY);
+      localStorage.getItem(
+        STORAGE_ROWS_KEY
+      );
 
-    if(!raw) return false;
+
+    if(!raw)
+      return false;
+
 
     const parsed =
       JSON.parse(raw);
 
+
     rows =
       parsed.map(r=>({
+
         ...r,
+
         _date:
           r._date
             ? new Date(r._date)
             : null
+
       }));
+
 
     return rows.length > 0;
 
   }catch(e){
 
     return false;
+
   }
+
 }
 
 
-/* ---------------- category colors ---------------- */
+/* =========================================================
+   CATEGORY COLORS
+   ========================================================= */
 
 function assignCategoryColors(){
 
   const counts = {};
+
 
   rows.forEach(r=>{
 
     if(r.pekerjaan){
 
       counts[r.pekerjaan] =
-        (counts[r.pekerjaan]||0) + 1;
+        (counts[r.pekerjaan] || 0) + 1;
+
     }
 
   });
@@ -447,17 +767,26 @@ function assignCategoryColors(){
 
   const top =
     Object.keys(counts)
-    .sort((a,b)=>counts[b]-counts[a])
-    .slice(0,CATEGORY_PALETTE.length);
+      .sort(
+        (a,b)=>
+          counts[b] - counts[a]
+      )
+      .slice(
+        0,
+        CATEGORY_PALETTE.length
+      );
 
 
   categoryColor = {};
+
 
   top.forEach((cat,i)=>{
 
     categoryColor[cat] =
       CATEGORY_PALETTE[i];
+
   });
+
 }
 
 
@@ -465,15 +794,409 @@ function colorFor(cat){
 
   return categoryColor[cat] ||
     '#5d7196';
+
 }
 
 
-/* ---------------- camera ---------------- */
+/* =========================================================
+   GOOGLE DRIVE / DOKUMENTASI
+   ========================================================= */
+
+function getDriveFileId(url){
+
+  if(!url)
+    return null;
+
+
+  const text =
+    String(url).trim();
+
+
+  /*
+   * Format:
+   * drive.google.com/file/d/FILE_ID/view
+   */
+
+  let match =
+    text.match(
+      /\/file\/d\/([a-zA-Z0-9_-]+)/
+    );
+
+
+  if(match)
+    return match[1];
+
+
+  /*
+   * Format:
+   * drive.google.com/open?id=FILE_ID
+   */
+
+  match =
+    text.match(
+      /[?&]id=([a-zA-Z0-9_-]+)/
+    );
+
+
+  if(match)
+    return match[1];
+
+
+  /*
+   * Format:
+   * drive.google.com/uc?id=FILE_ID
+   */
+
+  match =
+    text.match(
+      /\/uc\?.*id=([a-zA-Z0-9_-]+)/
+    );
+
+
+  if(match)
+    return match[1];
+
+
+  return null;
+
+}
+
+
+/* =========================================================
+   UBAH LINK DOKUMENTASI MENJADI URL GAMBAR
+   ========================================================= */
+
+function getImageUrl(url){
+
+  if(!url)
+    return null;
+
+
+  const raw =
+    String(url).trim();
+
+
+  if(!raw)
+    return null;
+
+
+  const driveId =
+    getDriveFileId(raw);
+
+
+  /*
+   * Jika Google Drive
+   */
+
+  if(driveId){
+
+    return `https://drive.google.com/thumbnail?id=${encodeURIComponent(driveId)}&sz=w1000`;
+
+  }
+
+
+  /*
+   * Jika URL langsung gambar
+   */
+
+  if(
+    /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?.*)?$/i
+      .test(raw)
+  ){
+
+    return raw;
+
+  }
+
+
+  /*
+   * Beberapa URL Googleusercontent
+   * dapat langsung digunakan.
+   */
+
+  if(
+    raw.includes('googleusercontent.com')
+  ){
+
+    return raw;
+
+  }
+
+
+  return null;
+
+}
+
+
+/* =========================================================
+   BUKA MODAL GAMBAR
+   ========================================================= */
+
+function openImageModal(
+  imageUrl,
+  caption
+){
+
+  const modal =
+    document.getElementById(
+      'imageModal'
+    );
+
+
+  const image =
+    document.getElementById(
+      'imageModalImg'
+    );
+
+
+  const captionEl =
+    document.getElementById(
+      'imageModalCaption'
+    );
+
+
+  if(!modal || !image)
+    return;
+
+
+  image.src =
+    imageUrl;
+
+
+  captionEl.textContent =
+    caption || 'Dokumentasi CCTV';
+
+
+  modal.classList.add('open');
+
+}
+
+
+/* =========================================================
+   TUTUP MODAL
+   ========================================================= */
+
+function closeImageModal(){
+
+  const modal =
+    document.getElementById(
+      'imageModal'
+    );
+
+
+  const image =
+    document.getElementById(
+      'imageModalImg'
+    );
+
+
+  if(modal){
+
+    modal.classList.remove(
+      'open'
+    );
+
+  }
+
+
+  if(image){
+
+    image.src = '';
+
+  }
+
+}
+
+
+/* =========================================================
+   DOKUMENTASI HTML
+   ========================================================= */
+
+function documentationHtml(
+  url,
+  caption
+){
+
+  if(!url){
+
+    return `
+      <div class="documentation-fallback">
+        Tidak ada dokumentasi
+      </div>
+    `;
+
+  }
+
+
+  const safeUrl =
+    esc(url);
+
+
+  const imageUrl =
+    getImageUrl(url);
+
+
+  /*
+   * Jika dapat dibuat menjadi URL gambar
+   */
+
+  if(imageUrl){
+
+    const safeImageUrl =
+      esc(imageUrl);
+
+
+    return `
+
+      <div class="documentation-cell">
+
+        <img
+          class="documentation-image"
+          src="${safeImageUrl}"
+          alt="Dokumentasi CCTV"
+          loading="lazy"
+          data-image-url="${safeImageUrl}"
+          data-caption="${esc(caption || 'Dokumentasi CCTV')}">
+
+        <a
+          class="documentation-link"
+          href="${safeUrl}"
+          target="_blank"
+          rel="noopener">
+
+          ↗ Buka
+
+        </a>
+
+      </div>
+
+    `;
+
+  }
+
+
+  /*
+   * Jika bukan URL gambar
+   */
+
+  return `
+
+    <div class="documentation-cell">
+
+      <div class="documentation-fallback">
+
+        📎 Dokumentasi
+
+      </div>
+
+
+      <a
+        class="documentation-link"
+        href="${safeUrl}"
+        target="_blank"
+        rel="noopener">
+
+        ↗ Buka Dokumentasi
+
+      </a>
+
+    </div>
+
+  `;
+
+}
+
+
+/* =========================================================
+   AKTIFKAN EVENT GAMBAR
+   ========================================================= */
+
+function bindDocumentationImages(){
+
+  document
+    .querySelectorAll(
+      '.documentation-image'
+    )
+    .forEach(img=>{
+
+      img.addEventListener(
+        'click',
+        ()=>{
+
+          openImageModal(
+            img.dataset.imageUrl,
+            img.dataset.caption
+          );
+
+        }
+      );
+
+
+      /*
+       * Jika gambar gagal dimuat,
+       * ubah menjadi fallback.
+       */
+
+      img.addEventListener(
+        'error',
+        ()=>{
+
+          const parent =
+            img.parentElement;
+
+
+          if(!parent)
+            return;
+
+
+          const originalUrl =
+            parent
+              .querySelector(
+                '.documentation-link'
+              )
+              ?.href || '#';
+
+
+          parent.innerHTML = `
+
+            <div class="documentation-fallback">
+
+              📎 Gambar tidak dapat ditampilkan
+
+            </div>
+
+
+            <a
+              class="documentation-link"
+              href="${esc(originalUrl)}"
+              target="_blank"
+              rel="noopener">
+
+              ↗ Buka Dokumentasi
+
+            </a>
+
+          `;
+
+        }
+      );
+
+    });
+
+}
+
+
+/* =========================================================
+   CAMERA
+   ========================================================= */
 
 function renderCameraRow(){
 
   const el =
-    document.getElementById('cameraRow');
+    document.getElementById(
+      'cameraRow'
+    );
+
 
   if(!rows.length){
 
@@ -481,39 +1204,52 @@ function renderCameraRow(){
       '<div class="camera-placeholder">Belum ada data perangkat CCTV. Klik ikon ⚙ di kanan atas untuk memuat data.</div>';
 
     return;
+
   }
 
 
   const latestByDevice = {};
 
+
   rows.forEach(r=>{
 
-    if(!r.perangkat) return;
+    if(!r.perangkat)
+      return;
+
 
     const existing =
-      latestByDevice[r.perangkat];
+      latestByDevice[
+        r.perangkat
+      ];
+
 
     if(
       !existing ||
       (
         r._date &&
         existing._date &&
-        r._date > existing._date
+        r._date >
+          existing._date
       )
     ){
 
-      latestByDevice[r.perangkat] = r;
+      latestByDevice[
+        r.perangkat
+      ] = r;
+
     }
 
   });
 
 
   const devices =
-    Object.values(latestByDevice)
+    Object.values(
+      latestByDevice
+    )
     .sort(
       (a,b)=>
-        (b._date?.getTime()||0) -
-        (a._date?.getTime()||0)
+        (b._date?.getTime() || 0) -
+        (a._date?.getTime() || 0)
     )
     .slice(0,4);
 
@@ -526,34 +1262,56 @@ function renderCameraRow(){
         <div class="cam-feed"></div>
 
         <div class="cam-tag">
+
           <span class="rec"></span>
+
           ${
             d._date &&
-            isSameDay(d._date,new Date())
+            isSameDay(
+              d._date,
+              new Date()
+            )
               ? 'AKTIF'
               : 'TERAKHIR'
           }
+
         </div>
+
 
         ${
           d.dokumentasi
-            ? `<a class="cam-open"
+
+            ? `<a
+                class="cam-open"
                 href="${esc(d.dokumentasi)}"
                 target="_blank"
                 rel="noopener">
+
                 ↗ Dokumentasi
+
               </a>`
+
             : ''
         }
+
 
         <div class="cam-info">
 
           <div class="name">
+
             ${esc(d.perangkat)}
+
           </div>
 
+
           <div class="loc">
-            ${esc(d.ulp || d.lokasi || '—')}
+
+            ${esc(
+              d.ulp ||
+              d.lokasi ||
+              '—'
+            )}
+
           </div>
 
         </div>
@@ -561,24 +1319,36 @@ function renderCameraRow(){
       </div>
 
     `).join('');
+
 }
 
 
-/* ---------------- line chart ---------------- */
+/* =========================================================
+   LINE CHART
+   ========================================================= */
 
 function renderLineChart(){
 
   const cats =
-    Object.keys(categoryColor);
+    Object.keys(
+      categoryColor
+    );
+
 
   const now =
     new Date();
 
+
   const year =
     now.getFullYear();
 
-  document.getElementById('lineSub')
-    .textContent = String(year);
+
+  document
+    .getElementById(
+      'lineSub'
+    )
+    .textContent =
+      String(year);
 
 
   const datasets =
@@ -586,6 +1356,7 @@ function renderLineChart(){
 
       const monthly =
         new Array(12).fill(0);
+
 
       rows.forEach(r=>{
 
@@ -598,6 +1369,7 @@ function renderLineChart(){
           monthly[
             r._date.getMonth()
           ]++;
+
         }
 
       });
@@ -605,9 +1377,9 @@ function renderLineChart(){
 
       return {
 
-        label:cat,
+        label: cat,
 
-        data:monthly,
+        data: monthly,
 
         borderColor:
           colorFor(cat),
@@ -615,9 +1387,9 @@ function renderLineChart(){
         backgroundColor:
           colorFor(cat),
 
-        tension:0.35,
+        tension: 0.35,
 
-        pointRadius:3,
+        pointRadius: 3,
 
         pointBackgroundColor:
           '#101f38',
@@ -625,11 +1397,12 @@ function renderLineChart(){
         pointBorderColor:
           colorFor(cat),
 
-        pointBorderWidth:2,
+        pointBorderWidth: 2,
 
-        borderWidth:2,
+        borderWidth: 2,
 
-        fill:false
+        fill: false
+
       };
 
     });
@@ -641,56 +1414,91 @@ function renderLineChart(){
 
   lineChart =
     new Chart(
-      document.getElementById('lineChart'),
+      document.getElementById(
+        'lineChart'
+      ),
       {
-        type:'line',
 
-        data:{
-          labels:BULAN_ID,
+        type: 'line',
+
+        data: {
+
+          labels:
+            BULAN_ID,
+
           datasets
+
         },
 
-        options:{
+        options: {
 
-          responsive:true,
+          responsive: true,
 
-          plugins:{
-            legend:{
-              display:true,
-              position:'right',
-              labels:{
-                color:'#93a6c4',
-                boxWidth:9,
-                boxHeight:9,
-                font:{size:11}
+          plugins: {
+
+            legend: {
+
+              display: true,
+
+              position: 'right',
+
+              labels: {
+
+                color:
+                  '#93a6c4',
+
+                boxWidth: 9,
+
+                boxHeight: 9,
+
+                font: {
+                  size: 11
+                }
+
               }
+
             }
+
           },
 
-          scales:{
+          scales: {
 
-            x:{
-              grid:{
-                color:'#233a5e'
+            x: {
+
+              grid: {
+                color: '#233a5e'
               },
-              ticks:{
-                color:'#93a6c4',
-                font:{size:11}
+
+              ticks: {
+                color: '#93a6c4',
+                font: {
+                  size: 11
+                }
               }
+
             },
 
-            y:{
-              grid:{
-                color:'#233a5e'
+            y: {
+
+              grid: {
+                color: '#233a5e'
               },
-              ticks:{
-                color:'#93a6c4',
-                font:{
-                  size:11
+
+              ticks: {
+
+                color:
+                  '#93a6c4',
+
+                font: {
+                  size: 11
                 },
-                precision:0
+
+                precision: 0
+
               },
-              beginAtZero:true
+
+              beginAtZero: true
+
             }
 
           }
@@ -699,21 +1507,26 @@ function renderLineChart(){
 
       }
     );
+
 }
 
 
-/* ---------------- donut chart ---------------- */
+/* =========================================================
+   DONUT
+   ========================================================= */
 
 function renderDonutChart(){
 
   const counts = {};
+
 
   rows.forEach(r=>{
 
     if(r.up3){
 
       counts[r.up3] =
-        (counts[r.up3]||0)+1;
+        (counts[r.up3] || 0) + 1;
+
     }
 
   });
@@ -721,33 +1534,41 @@ function renderDonutChart(){
 
   let entries =
     Object.entries(counts)
-    .sort((a,b)=>b[1]-a[1]);
+      .sort(
+        (a,b)=>
+          b[1] - a[1]
+      );
 
 
   if(entries.length > 5){
 
     const rest =
       entries
-      .slice(4)
-      .reduce(
-        (s,e)=>s+e[1],
-        0
-      );
+        .slice(4)
+        .reduce(
+          (s,e)=>
+            s + e[1],
+          0
+        );
+
 
     entries =
       entries
-      .slice(0,4)
-      .concat([
-        ['Lainnya',rest]
-      ]);
+        .slice(0,4)
+        .concat([
+          ['Lainnya',rest]
+        ]);
+
   }
 
 
   const labels =
     entries.map(e=>e[0]);
 
+
   const data =
     entries.map(e=>e[1]);
+
 
   const colors =
     labels.map(
@@ -764,71 +1585,94 @@ function renderDonutChart(){
 
   donutChart =
     new Chart(
-      document.getElementById('donutChart'),
+      document.getElementById(
+        'donutChart'
+      ),
       {
-        type:'doughnut',
 
-        data:{
+        type: 'doughnut',
+
+        data: {
+
           labels,
 
-          datasets:[{
+          datasets: [{
+
             data,
 
-            backgroundColor:colors,
+            backgroundColor:
+              colors,
 
-            borderColor:'#132542',
+            borderColor:
+              '#132542',
 
-            borderWidth:3
+            borderWidth: 3
+
           }]
+
         },
 
-        options:{
-          responsive:true,
+        options: {
 
-          cutout:'68%',
+          responsive: true,
 
-          plugins:{
-            legend:{
-              display:false
+          cutout: '68%',
+
+          plugins: {
+
+            legend: {
+              display: false
             }
+
           }
+
         }
+
       }
     );
 
 
-  document.getElementById('donutLegend')
-    .innerHTML = labels.map((l,i)=>`
+  document
+    .getElementById(
+      'donutLegend'
+    )
+    .innerHTML =
+      labels.map((l,i)=>`
 
-      <div class="legend-row">
+        <div class="legend-row">
 
-        <span
-          class="legend-dot"
-          style="background:${colors[i]}">
-        </span>
+          <span
+            class="legend-dot"
+            style="background:${colors[i]}">
+          </span>
 
-        ${esc(l)}
+          ${esc(l)}
 
-        <b>${data[i]}</b>
+          <b>${data[i]}</b>
 
-      </div>
+        </div>
 
-    `).join('');
+      `).join('');
+
 }
 
 
-/* ---------------- stacked bar ---------------- */
+/* =========================================================
+   BAR CHART
+   ========================================================= */
 
 function renderBarChart(){
 
   const ulpCounts = {};
+
 
   rows.forEach(r=>{
 
     if(r.ulp){
 
       ulpCounts[r.ulp] =
-        (ulpCounts[r.ulp]||0)+1;
+        (ulpCounts[r.ulp] || 0) + 1;
+
     }
 
   });
@@ -836,33 +1680,39 @@ function renderBarChart(){
 
   const topUlp =
     Object.keys(ulpCounts)
-    .sort((a,b)=>ulpCounts[b]-ulpCounts[a])
-    .slice(0,7);
+      .sort(
+        (a,b)=>
+          ulpCounts[b] -
+          ulpCounts[a]
+      )
+      .slice(0,7);
 
 
   const cats =
-    Object.keys(categoryColor);
+    Object.keys(
+      categoryColor
+    );
 
 
   const datasets =
     cats.map(cat=>({
 
-      label:cat,
+      label: cat,
 
       data:
         topUlp.map(
           ulp =>
             rows.filter(
               r =>
-                r.ulp===ulp &&
-                r.pekerjaan===cat
+                r.ulp === ulp &&
+                r.pekerjaan === cat
             ).length
         ),
 
       backgroundColor:
         colorFor(cat),
 
-      stack:'stack1'
+      stack: 'stack1'
 
     }));
 
@@ -873,62 +1723,101 @@ function renderBarChart(){
 
   barChart =
     new Chart(
-      document.getElementById('barChart'),
+      document.getElementById(
+        'barChart'
+      ),
       {
-        type:'bar',
 
-        data:{
-          labels:topUlp,
+        type: 'bar',
+
+        data: {
+
+          labels: topUlp,
+
           datasets
+
         },
 
-        options:{
+        options: {
 
-          responsive:true,
+          responsive: true,
 
-          plugins:{
-            legend:{
-              display:true,
-              position:'bottom',
+          plugins: {
 
-              labels:{
-                color:'#93a6c4',
-                boxWidth:9,
-                boxHeight:9,
-                font:{size:11}
+            legend: {
+
+              display: true,
+
+              position: 'bottom',
+
+              labels: {
+
+                color:
+                  '#93a6c4',
+
+                boxWidth: 9,
+
+                boxHeight: 9,
+
+                font: {
+                  size: 11
+                }
+
               }
+
             }
+
           },
 
-          scales:{
+          scales: {
 
-            x:{
-              stacked:true,
-              grid:{
-                display:false
+            x: {
+
+              stacked: true,
+
+              grid: {
+                display: false
               },
-              ticks:{
-                color:'#93a6c4',
-                font:{size:11}
+
+              ticks: {
+
+                color:
+                  '#93a6c4',
+
+                font: {
+                  size: 11
+                }
+
               }
+
             },
 
-            y:{
-              stacked:true,
+            y: {
 
-              grid:{
-                color:'#233a5e'
+              stacked: true,
+
+              grid: {
+
+                color:
+                  '#233a5e'
+
               },
 
-              ticks:{
-                color:'#93a6c4',
-                font:{
-                  size:11
+              ticks: {
+
+                color:
+                  '#93a6c4',
+
+                font: {
+                  size: 11
                 },
-                precision:0
+
+                precision: 0
+
               },
 
-              beginAtZero:true
+              beginAtZero: true
+
             }
 
           }
@@ -937,6 +1826,7 @@ function renderBarChart(){
 
       }
     );
+
 }
 
 
@@ -947,16 +1837,19 @@ function renderBarChart(){
 function renderRecentList(){
 
   const el =
-    document.getElementById('recentList');
+    document.getElementById(
+      'recentList'
+    );
+
 
   const sorted =
     [...rows]
-    .sort(
-      (a,b)=>
-        (b._date?.getTime()||0) -
-        (a._date?.getTime()||0)
-    )
-    .slice(0,6);
+      .sort(
+        (a,b)=>
+          (b._date?.getTime() || 0) -
+          (a._date?.getTime() || 0)
+      )
+      .slice(0,6);
 
 
   if(!sorted.length){
@@ -965,6 +1858,7 @@ function renderRecentList(){
       '<div class="empty-mini">Belum ada data.</div>';
 
     return;
+
   }
 
 
@@ -976,11 +1870,20 @@ function renderRecentList(){
         <div>
 
           <div class="rname">
-            ${esc(r.pekerjaan)||'—'}
+
+            ${esc(r.pekerjaan) || '—'}
+
           </div>
 
+
           <div class="rloc">
-            ${esc(r.lokasi || r.ulp || '—')}
+
+            ${esc(
+              r.lokasi ||
+              r.ulp ||
+              '—'
+            )}
+
           </div>
 
         </div>
@@ -988,16 +1891,21 @@ function renderRecentList(){
 
         <div class="recent-right">
 
-          <!-- DIPERBAIKI: timestamp asli -->
           <span class="rdate">
-            ${fmtDate(r._date, r.timestamp)}
+
+            ${fmtDate(
+              r._date,
+              r.timestamp
+            )}
+
           </span>
+
 
           <span
             class="badge"
             style="background:${colorFor(r.pekerjaan)}">
 
-            ${esc(r.pekerjaan)||'—'}
+            ${esc(r.pekerjaan) || '—'}
 
           </span>
 
@@ -1006,6 +1914,7 @@ function renderRecentList(){
       </div>
 
     `).join('');
+
 }
 
 
@@ -1018,6 +1927,7 @@ function renderSummary(){
   const today =
     new Date();
 
+
   const todays =
     rows.filter(
       r =>
@@ -1028,8 +1938,12 @@ function renderSummary(){
     );
 
 
-  document.getElementById('welcomeMsg')
+  document
+    .getElementById(
+      'welcomeMsg'
+    )
     .textContent =
+
       rows.length
 
         ? `${HARI_ID[today.getDay()]}, ${fmtDate(today)} · ${rows.length} total pekerjaan tercatat, ${todays.length} hari ini.`
@@ -1037,11 +1951,15 @@ function renderSummary(){
         : 'Selamat datang. Belum ada data — buka panel Sumber Data (⚙) untuk mulai.';
 
 
-  document.getElementById('notifDot')
+  document
+    .getElementById(
+      'notifDot'
+    )
     .style.display =
       todays.length
         ? 'block'
         : 'none';
+
 }
 
 
@@ -1064,23 +1982,26 @@ function renderAll(){
   renderRecentList();
 
   renderCurrentView();
+
 }
 
 
 /* =========================================================
-   SEARCH
+   GLOBAL SEARCH
    ========================================================= */
 
 document
-  .getElementById('globalSearch')
+  .getElementById(
+    'globalSearch'
+  )
   .addEventListener(
     'input',
-    (e)=>{
+    e=>{
 
       const q =
         e.target.value
-        .trim()
-        .toLowerCase();
+          .trim()
+          .toLowerCase();
 
 
       const el =
@@ -1092,19 +2013,22 @@ document
       const source =
         q
 
-          ? rows.filter(
-              r =>
-                [
-                  r.pekerjaan,
-                  r.petugas,
-                  r.lokasi,
-                  r.perangkat,
-                  r.up3,
-                  r.ulp
-                ]
-                .join(' ')
-                .toLowerCase()
-                .includes(q)
+          ? rows.filter(r=>
+              [
+
+                r.timestamp,
+                r.pekerjaan,
+                r.petugas,
+                r.lokasi,
+                r.perangkat,
+                r.up3,
+                r.ulp,
+                r.dokumentasi
+
+              ]
+              .join(' ')
+              .toLowerCase()
+              .includes(q)
             )
 
           : rows;
@@ -1112,12 +2036,12 @@ document
 
       const sorted =
         [...source]
-        .sort(
-          (a,b)=>
-            (b._date?.getTime()||0) -
-            (a._date?.getTime()||0)
-        )
-        .slice(0,8);
+          .sort(
+            (a,b)=>
+              (b._date?.getTime() || 0) -
+              (a._date?.getTime() || 0)
+          )
+          .slice(0,8);
 
 
       if(!sorted.length){
@@ -1126,6 +2050,7 @@ document
           '<div class="empty-mini">Tidak ada hasil.</div>';
 
         return;
+
       }
 
 
@@ -1137,11 +2062,20 @@ document
             <div>
 
               <div class="rname">
-                ${esc(r.pekerjaan)||'—'}
+
+                ${esc(r.pekerjaan) || '—'}
+
               </div>
 
+
               <div class="rloc">
-                ${esc(r.lokasi || r.ulp || '—')}
+
+                ${esc(
+                  r.lokasi ||
+                  r.ulp ||
+                  '—'
+                )}
+
               </div>
 
             </div>
@@ -1149,16 +2083,21 @@ document
 
             <div class="recent-right">
 
-              <!-- DIPERBAIKI -->
               <span class="rdate">
-                ${fmtDate(r._date, r.timestamp)}
+
+                ${fmtDate(
+                  r._date,
+                  r.timestamp
+                )}
+
               </span>
+
 
               <span
                 class="badge"
                 style="background:${colorFor(r.pekerjaan)}">
 
-                ${esc(r.pekerjaan)||'—'}
+                ${esc(r.pekerjaan) || '—'}
 
               </span>
 
@@ -1173,14 +2112,19 @@ document
 
 
 /* =========================================================
-   DATA SOURCE DRAWER
+   DRAWER
    ========================================================= */
 
 const drawer =
-  document.getElementById('dataDrawer');
+  document.getElementById(
+    'dataDrawer'
+  );
+
 
 const overlay =
-  document.getElementById('drawerOverlay');
+  document.getElementById(
+    'drawerOverlay'
+  );
 
 
 function openDrawer(){
@@ -1188,6 +2132,7 @@ function openDrawer(){
   drawer.classList.add('open');
 
   overlay.classList.add('open');
+
 }
 
 
@@ -1196,11 +2141,14 @@ function closeDrawerFn(){
   drawer.classList.remove('open');
 
   overlay.classList.remove('open');
+
 }
 
 
 document
-  .getElementById('settingsBtn')
+  .getElementById(
+    'settingsBtn'
+  )
   .addEventListener(
     'click',
     openDrawer
@@ -1208,18 +2156,25 @@ document
 
 
 document
-  .getElementById('openDataDrawerLink')
+  .getElementById(
+    'openDataDrawerLink'
+  )
   .addEventListener(
     'click',
-    (e)=>{
+    e=>{
+
       e.preventDefault();
+
       openDrawer();
+
     }
   );
 
 
 document
-  .getElementById('closeDrawer')
+  .getElementById(
+    'closeDrawer'
+  )
   .addEventListener(
     'click',
     closeDrawerFn
@@ -1237,7 +2192,9 @@ overlay.addEventListener(
    ========================================================= */
 
 document
-  .getElementById('fileInput')
+  .getElementById(
+    'fileInput'
+  )
   .addEventListener(
     'change',
     function(e){
@@ -1245,7 +2202,9 @@ document
       const file =
         e.target.files[0];
 
-      if(!file) return;
+
+      if(!file)
+        return;
 
 
       const name =
@@ -1261,9 +2220,12 @@ document
 
           try{
 
-            if(name.endsWith('.csv')){
+            if(
+              name.endsWith('.csv')
+            ){
 
               ingest(
+
                 Papa.parse(
                   evt.target.result,
                   {
@@ -1273,6 +2235,7 @@ document
                 ).data,
 
                 `file "${file.name}"`
+
               );
 
             }else{
@@ -1280,7 +2243,9 @@ document
               const wb =
                 XLSX.read(
                   evt.target.result,
-                  {type:'array'}
+                  {
+                    type:'array'
+                  }
                 );
 
 
@@ -1289,7 +2254,9 @@ document
                   wb.Sheets[
                     wb.SheetNames[0]
                   ],
-                  {defval:''}
+                  {
+                    defval:''
+                  }
                 );
 
 
@@ -1297,6 +2264,7 @@ document
                 json,
                 `file "${file.name}"`
               );
+
             }
 
           }catch(err){
@@ -1306,18 +2274,23 @@ document
               err.message,
               'err'
             );
+
           }
 
         };
 
 
-      if(name.endsWith('.csv'))
+      if(
+        name.endsWith('.csv')
+      ){
 
         reader.readAsText(file);
 
-      else
+      }else{
 
         reader.readAsArrayBuffer(file);
+
+      }
 
     }
   );
@@ -1328,18 +2301,20 @@ document
    ========================================================= */
 
 document
-  .getElementById('loadUrlBtn')
+  .getElementById(
+    'loadUrlBtn'
+  )
   .addEventListener(
     'click',
     async ()=>{
 
       const url =
         document
-        .getElementById(
-          'csvUrlInput'
-        )
-        .value
-        .trim();
+          .getElementById(
+            'csvUrlInput'
+          )
+          .value
+          .trim();
 
 
       if(!url){
@@ -1350,6 +2325,7 @@ document
         );
 
         return;
+
       }
 
 
@@ -1361,7 +2337,9 @@ document
       try{
 
         const data =
-          await fetchAndParse(url);
+          await fetchAndParse(
+            url
+          );
 
 
         ingest(
@@ -1377,12 +2355,15 @@ document
 
 
         document
-          .getElementById('refreshBtn')
+          .getElementById(
+            'refreshBtn'
+          )
           .style.display =
             'inline-block';
 
 
         startAutoRefresh();
+
 
       }catch(err){
 
@@ -1391,14 +2372,21 @@ document
           err.message,
           'err'
         );
+
       }
 
     }
   );
 
 
+/* =========================================================
+   REFRESH
+   ========================================================= */
+
 document
-  .getElementById('refreshBtn')
+  .getElementById(
+    'refreshBtn'
+  )
   .addEventListener(
     'click',
     ()=>refreshFromSavedSource(true)
@@ -1410,18 +2398,20 @@ document
    ========================================================= */
 
 document
-  .getElementById('loadPasteBtn')
+  .getElementById(
+    'loadPasteBtn'
+  )
   .addEventListener(
     'click',
     ()=>{
 
       const text =
         document
-        .getElementById(
-          'csvPasteInput'
-        )
-        .value
-        .trim();
+          .getElementById(
+            'csvPasteInput'
+          )
+          .value
+          .trim();
 
 
       if(!text){
@@ -1432,10 +2422,12 @@ document
         );
 
         return;
+
       }
 
 
       ingest(
+
         Papa.parse(
           text,
           {
@@ -1445,6 +2437,7 @@ document
         ).data,
 
         'data tempel'
+
       );
 
     }
@@ -1456,7 +2449,9 @@ document
    ========================================================= */
 
 document
-  .getElementById('sampleBtn')
+  .getElementById(
+    'sampleBtn'
+  )
   .addEventListener(
     'click',
     ()=>{
@@ -1464,87 +2459,226 @@ document
       const sample = [
 
         {
-          Timestamp:'24/11/2025 8:23:56',
-          'Unit UP3':'UP3 Kendari',
-          'Unit ULP':'ULP Wua Wua',
-          'NAMA PERANGKAT CCTV':'CCTV WUA WUA',
-          'Nama Pekerjaan':'Pelayanan Gangguan',
-          'Lokasi Pekerjaan':'Kendari',
-          'Petugas Pelaksana di Lapangan':'Andi Saputra',
-          'Dokumentasi CCTV':'https://drive.google.com/open?id=1a',
-          'Deskripsi':'Perbaikan koneksi jaringan CCTV pasca gangguan listrik.'
+
+          Timestamp:
+            '24/11/2025 08:23:56',
+
+          'Unit UP3':
+            'UP3 Kendari',
+
+          'Unit ULP':
+            'ULP Wua Wua',
+
+          'NAMA PERANGKAT CCTV':
+            'CCTV WUA WUA',
+
+          'Nama Pekerjaan':
+            'Pelayanan Gangguan',
+
+          'Lokasi Pekerjaan':
+            'Kendari',
+
+          'Petugas Pelaksana di Lapangan':
+            'Andi Saputra',
+
+          'Dokumentasi CCTV':
+            'https://drive.google.com/open?id=1a',
+
+          'Deskripsi':
+            'Perbaikan koneksi jaringan CCTV pasca gangguan listrik.'
+
         },
 
-        {
-          Timestamp:'24/11/2025 10:05:12',
-          'Unit UP3':'UP3 Kendari',
-          'Unit ULP':'ULP Kolaka',
-          'NAMA PERANGKAT CCTV':'CCTV KOLAKA 02',
-          'Nama Pekerjaan':'Pemeliharaan Rutin',
-          'Lokasi Pekerjaan':'Kolaka',
-          'Petugas Pelaksana di Lapangan':'Budi Santoso',
-          'Dokumentasi CCTV':'https://drive.google.com/open?id=1b',
-          'Deskripsi':'Pembersihan lensa kamera.'
-        },
 
         {
-          Timestamp:'23/11/2025 14:40:00',
-          'Unit UP3':'UP3 Bau-Bau',
-          'Unit ULP':'ULP Baubau Kota',
-          'NAMA PERANGKAT CCTV':'CCTV GARDU INDUK',
-          'Nama Pekerjaan':'Instalasi Baru',
-          'Lokasi Pekerjaan':'Baubau',
-          'Petugas Pelaksana di Lapangan':'Citra Dewi',
-          'Dokumentasi CCTV':'https://drive.google.com/open?id=1c',
-          'Deskripsi':'Pemasangan unit CCTV baru.'
+
+          Timestamp:
+            '24/11/2025 10:05:12',
+
+          'Unit UP3':
+            'UP3 Kendari',
+
+          'Unit ULP':
+            'ULP Kolaka',
+
+          'NAMA PERANGKAT CCTV':
+            'CCTV KOLAKA 02',
+
+          'Nama Pekerjaan':
+            'Pemeliharaan Rutin',
+
+          'Lokasi Pekerjaan':
+            'Kolaka',
+
+          'Petugas Pelaksana di Lapangan':
+            'Budi Santoso',
+
+          'Dokumentasi CCTV':
+            'https://drive.google.com/open?id=1b',
+
+          'Deskripsi':
+            'Pembersihan lensa kamera.'
+
         },
 
-        {
-          Timestamp:'22/11/2025 9:15:30',
-          'Unit UP3':'UP3 Kendari',
-          'Unit ULP':'ULP Wua Wua',
-          'NAMA PERANGKAT CCTV':'CCTV WUA WUA',
-          'Nama Pekerjaan':'Perbaikan Perangkat',
-          'Lokasi Pekerjaan':'Kendari',
-          'Petugas Pelaksana di Lapangan':'Andi Saputra',
-          'Dokumentasi CCTV':'https://drive.google.com/open?id=1d',
-          'Deskripsi':'Penggantian kabel power.'
-        },
 
         {
-          Timestamp:'21/11/2025 16:02:45',
-          'Unit UP3':'UP3 Bau-Bau',
-          'Unit ULP':'ULP Wolio',
-          'NAMA PERANGKAT CCTV':'CCTV WOLIO',
-          'Nama Pekerjaan':'Pemeliharaan Rutin',
-          'Lokasi Pekerjaan':'Wolio',
-          'Petugas Pelaksana di Lapangan':'Dedi Kurniawan',
-          'Dokumentasi CCTV':'https://drive.google.com/open?id=1e',
-          'Deskripsi':'Pengecekan rekaman 7 hari terakhir.'
+
+          Timestamp:
+            '23/11/2025 14:40:00',
+
+          'Unit UP3':
+            'UP3 Bau-Bau',
+
+          'Unit ULP':
+            'ULP Baubau Kota',
+
+          'NAMA PERANGKAT CCTV':
+            'CCTV GARDU INDUK',
+
+          'Nama Pekerjaan':
+            'Instalasi Baru',
+
+          'Lokasi Pekerjaan':
+            'Baubau',
+
+          'Petugas Pelaksana di Lapangan':
+            'Citra Dewi',
+
+          'Dokumentasi CCTV':
+            'https://drive.google.com/open?id=1c',
+
+          'Deskripsi':
+            'Pemasangan unit CCTV baru.'
+
         },
 
-        {
-          Timestamp:'18/11/2025 11:30:00',
-          'Unit UP3':'UP3 Kendari',
-          'Unit ULP':'ULP Kolaka',
-          'NAMA PERANGKAT CCTV':'CCTV KOLAKA 02',
-          'Nama Pekerjaan':'Pelayanan Gangguan',
-          'Lokasi Pekerjaan':'Kolaka',
-          'Petugas Pelaksana di Lapangan':'Budi Santoso',
-          'Dokumentasi CCTV':'https://drive.google.com/open?id=1f',
-          'Deskripsi':'Gangguan sinyal kamera akibat cuaca ekstrem.'
-        },
 
         {
-          Timestamp:'15/11/2025 13:10:00',
-          'Unit UP3':'UP3 Bau-Bau',
-          'Unit ULP':'ULP Baubau Kota',
-          'NAMA PERANGKAT CCTV':'CCTV GARDU INDUK',
-          'Nama Pekerjaan':'Perbaikan Perangkat',
-          'Lokasi Pekerjaan':'Baubau',
-          'Petugas Pelaksana di Lapangan':'Citra Dewi',
-          'Dokumentasi CCTV':'https://drive.google.com/open?id=1g',
-          'Deskripsi':'Perbaikan bracket kamera yang longgar.'
+
+          Timestamp:
+            '22/11/2025 09:15:30',
+
+          'Unit UP3':
+            'UP3 Kendari',
+
+          'Unit ULP':
+            'ULP Wua Wua',
+
+          'NAMA PERANGKAT CCTV':
+            'CCTV WUA WUA',
+
+          'Nama Pekerjaan':
+            'Perbaikan Perangkat',
+
+          'Lokasi Pekerjaan':
+            'Kendari',
+
+          'Petugas Pelaksana di Lapangan':
+            'Andi Saputra',
+
+          'Dokumentasi CCTV':
+            'https://drive.google.com/open?id=1d',
+
+          'Deskripsi':
+            'Penggantian kabel power.'
+
+        },
+
+
+        {
+
+          Timestamp:
+            '21/11/2025 16:02:45',
+
+          'Unit UP3':
+            'UP3 Bau-Bau',
+
+          'Unit ULP':
+            'ULP Wolio',
+
+          'NAMA PERANGKAT CCTV':
+            'CCTV WOLIO',
+
+          'Nama Pekerjaan':
+            'Pemeliharaan Rutin',
+
+          'Lokasi Pekerjaan':
+            'Wolio',
+
+          'Petugas Pelaksana di Lapangan':
+            'Dedi Kurniawan',
+
+          'Dokumentasi CCTV':
+            'https://drive.google.com/open?id=1e',
+
+          'Deskripsi':
+            'Pengecekan rekaman 7 hari terakhir.'
+
+        },
+
+
+        {
+
+          Timestamp:
+            '18/11/2025 11:30:00',
+
+          'Unit UP3':
+            'UP3 Kendari',
+
+          'Unit ULP':
+            'ULP Kolaka',
+
+          'NAMA PERANGKAT CCTV':
+            'CCTV KOLAKA 02',
+
+          'Nama Pekerjaan':
+            'Pelayanan Gangguan',
+
+          'Lokasi Pekerjaan':
+            'Kolaka',
+
+          'Petugas Pelaksana di Lapangan':
+            'Budi Santoso',
+
+          'Dokumentasi CCTV':
+            'https://drive.google.com/open?id=1f',
+
+          'Deskripsi':
+            'Gangguan sinyal kamera akibat cuaca ekstrem.'
+
+        },
+
+
+        {
+
+          Timestamp:
+            '15/11/2025 13:10:00',
+
+          'Unit UP3':
+            'UP3 Bau-Bau',
+
+          'Unit ULP':
+            'ULP Baubau Kota',
+
+          'NAMA PERANGKAT CCTV':
+            'CCTV GARDU INDUK',
+
+          'Nama Pekerjaan':
+            'Perbaikan Perangkat',
+
+          'Lokasi Pekerjaan':
+            'Baubau',
+
+          'Petugas Pelaksana di Lapangan':
+            'Citra Dewi',
+
+          'Dokumentasi CCTV':
+            'https://drive.google.com/open?id=1g',
+
+          'Deskripsi':
+            'Perbaikan bracket kamera yang longgar.'
+
         }
 
       ];
@@ -1564,16 +2698,20 @@ document
    ========================================================= */
 
 document
-  .getElementById('clearBtn')
+  .getElementById(
+    'clearBtn'
+  )
   .addEventListener(
     'click',
     ()=>{
 
       rows = [];
 
+
       localStorage.removeItem(
         STORAGE_ROWS_KEY
       );
+
 
       localStorage.removeItem(
         STORAGE_URL_KEY
@@ -1581,7 +2719,9 @@ document
 
 
       document
-        .getElementById('refreshBtn')
+        .getElementById(
+          'refreshBtn'
+        )
         .style.display =
           'none';
 
@@ -1591,10 +2731,13 @@ document
       );
 
 
-      if(autoRefreshTimer)
+      if(autoRefreshTimer){
+
         clearInterval(
           autoRefreshTimer
         );
+
+      }
 
 
       renderAll();
@@ -1609,21 +2752,27 @@ document
 
 function startAutoRefresh(){
 
-  if(autoRefreshTimer)
+  if(autoRefreshTimer){
+
     clearInterval(
       autoRefreshTimer
     );
+
+  }
 
 
   autoRefreshTimer =
     setInterval(
       ()=>refreshFromSavedSource(false),
-      5*60*1000
+      5 * 60 * 1000
     );
+
 }
 
 
-async function refreshFromSavedSource(manual){
+async function refreshFromSavedSource(
+  manual
+){
 
   const url =
     localStorage.getItem(
@@ -1631,19 +2780,25 @@ async function refreshFromSavedSource(manual){
     );
 
 
-  if(!url) return;
+  if(!url)
+    return;
 
 
   try{
 
-    if(manual)
+    if(manual){
+
       setStatus(
         'Menyegarkan data…'
       );
 
+    }
+
 
     const data =
-      await fetchAndParse(url);
+      await fetchAndParse(
+        url
+      );
 
 
     ingest(
@@ -1651,15 +2806,21 @@ async function refreshFromSavedSource(manual){
       'sumber otomatis (diperbarui)'
     );
 
+
   }catch(err){
 
-    if(manual)
+    if(manual){
+
       setStatus(
         'Gagal menyegarkan: ' +
         err.message,
         'err'
       );
+
+    }
+
   }
+
 }
 
 
@@ -1668,24 +2829,32 @@ async function refreshFromSavedSource(manual){
    ========================================================= */
 
 document
-  .getElementById('themeToggle')
+  .getElementById(
+    'themeToggle'
+  )
   .addEventListener(
     'click',
     ()=>{
 
       document.body
         .classList
-        .toggle('theme-light');
+        .toggle(
+          'theme-light'
+        );
 
 
       localStorage.setItem(
+
         STORAGE_THEME_KEY,
 
         document.body
           .classList
-          .contains('theme-light')
-          ? 'light'
-          : 'dark'
+          .contains(
+            'theme-light'
+          )
+            ? 'light'
+            : 'dark'
+
       );
 
     }
@@ -1697,15 +2866,21 @@ document
    ========================================================= */
 
 document
-  .getElementById('sidebarToggle')
+  .getElementById(
+    'sidebarToggle'
+  )
   .addEventListener(
     'click',
     ()=>{
 
       document
-        .getElementById('sidebar')
+        .getElementById(
+          'sidebar'
+        )
         .classList
-        .toggle('collapsed');
+        .toggle(
+          'collapsed'
+        );
 
     }
   );
@@ -1729,7 +2904,12 @@ const VIEW_RENDERERS = {
   'cctv-direktori':
     renderDirektoriView,
 
-  'data-kelola':
+  /*
+   * PERUBAHAN:
+   * data-kelola -> pekerjaan-log
+   */
+
+  'pekerjaan-log':
     renderKelolaDataView,
 
   'laporan-rekap':
@@ -1752,6 +2932,7 @@ const VIEW_RENDERERS = {
 
   'metrik-peta':
     renderMetrikPetaView
+
 };
 
 
@@ -1762,7 +2943,9 @@ let currentView =
 function showView(viewId){
 
   document
-    .querySelectorAll('.view')
+    .querySelectorAll(
+      '.view'
+    )
     .forEach(
       v =>
         v.classList.remove(
@@ -1777,10 +2960,14 @@ function showView(viewId){
     );
 
 
-  if(!target) return;
+  if(!target)
+    return;
 
 
-  target.classList.add('active');
+  target.classList.add(
+    'active'
+  );
+
 
   currentView =
     viewId;
@@ -1800,8 +2987,14 @@ function showView(viewId){
     });
 
 
-  if(VIEW_RENDERERS[viewId])
+  if(
+    VIEW_RENDERERS[viewId]
+  ){
+
     VIEW_RENDERERS[viewId]();
+
+  }
+
 }
 
 
@@ -1813,7 +3006,9 @@ function renderCurrentView(){
   ){
 
     VIEW_RENDERERS[currentView]();
+
   }
+
 }
 
 
@@ -1825,9 +3020,10 @@ document
 
     link.addEventListener(
       'click',
-      (e)=>{
+      e=>{
 
         e.preventDefault();
+
 
         showView(
           link.dataset.view
@@ -1856,7 +3052,9 @@ function loadPetugas(){
   }catch(e){
 
     return [];
+
   }
+
 }
 
 
@@ -1866,12 +3064,14 @@ function savePetugas(list){
     STORAGE_PETUGAS_KEY,
     JSON.stringify(list)
   );
+
 }
 
 
 function renderPetugasTambahView(){
 
   renderPetugasTable();
+
 }
 
 
@@ -1879,6 +3079,7 @@ function renderPetugasTable(){
 
   const list =
     loadPetugas();
+
 
   const tbody =
     document.querySelector(
@@ -1892,6 +3093,7 @@ function renderPetugasTable(){
       '<tr><td colspan="5" class="empty-mini">Belum ada petugas ditambahkan.</td></tr>';
 
     return;
+
   }
 
 
@@ -1905,15 +3107,15 @@ function renderPetugasTable(){
         </td>
 
         <td>
-          ${esc(p.telepon)||'—'}
+          ${esc(p.telepon) || '—'}
         </td>
 
         <td>
-          ${esc(p.email)||'—'}
+          ${esc(p.email) || '—'}
         </td>
 
         <td>
-          ${esc(p.unit)||'—'}
+          ${esc(p.unit) || '—'}
         </td>
 
         <td>
@@ -1921,13 +3123,18 @@ function renderPetugasTable(){
           <span
             class="link-btn"
             data-edit="${p.id}">
+
             Edit
+
           </span>
+
 
           <span
             class="link-btn danger"
             data-del="${p.id}">
+
             Hapus
+
           </span>
 
         </td>
@@ -1938,7 +3145,9 @@ function renderPetugasTable(){
 
 
   tbody
-    .querySelectorAll('[data-edit]')
+    .querySelectorAll(
+      '[data-edit]'
+    )
     .forEach(
       el =>
         el.addEventListener(
@@ -1951,7 +3160,9 @@ function renderPetugasTable(){
 
 
   tbody
-    .querySelectorAll('[data-del]')
+    .querySelectorAll(
+      '[data-del]'
+    )
     .forEach(
       el =>
         el.addEventListener(
@@ -1961,6 +3172,7 @@ function renderPetugasTable(){
           )
         )
     );
+
 }
 
 
@@ -1968,84 +3180,121 @@ function startEditPetugas(id){
 
   const p =
     loadPetugas()
-    .find(x=>x.id===id);
+      .find(
+        x => x.id === id
+      );
 
 
-  if(!p) return;
-
-
-  document
-    .getElementById('petugasEditId')
-    .value = p.id;
-
-
-  document
-    .getElementById('petugasNama')
-    .value = p.nama || '';
+  if(!p)
+    return;
 
 
   document
-    .getElementById('petugasTelepon')
-    .value = p.telepon || '';
+    .getElementById(
+      'petugasEditId'
+    )
+    .value =
+      p.id;
 
 
   document
-    .getElementById('petugasEmail')
-    .value = p.email || '';
+    .getElementById(
+      'petugasNama'
+    )
+    .value =
+      p.nama || '';
 
 
   document
-    .getElementById('petugasUnit')
-    .value = p.unit || '';
+    .getElementById(
+      'petugasTelepon'
+    )
+    .value =
+      p.telepon || '';
 
 
   document
-    .getElementById('petugasFormTitle')
+    .getElementById(
+      'petugasEmail'
+    )
+    .value =
+      p.email || '';
+
+
+  document
+    .getElementById(
+      'petugasUnit'
+    )
+    .value =
+      p.unit || '';
+
+
+  document
+    .getElementById(
+      'petugasFormTitle'
+    )
     .textContent =
       'Edit Petugas';
 
 
   document
-    .getElementById('petugasSubmitBtn')
+    .getElementById(
+      'petugasSubmitBtn'
+    )
     .textContent =
       'Simpan Perubahan';
 
 
   document
-    .getElementById('petugasCancelEdit')
+    .getElementById(
+      'petugasCancelEdit'
+    )
     .style.display =
       'inline-block';
+
 }
 
 
 function resetPetugasForm(){
 
   document
-    .getElementById('petugasForm')
+    .getElementById(
+      'petugasForm'
+    )
     .reset();
 
 
   document
-    .getElementById('petugasEditId')
-    .value = '';
+    .getElementById(
+      'petugasEditId'
+    )
+    .value =
+      '';
 
 
   document
-    .getElementById('petugasFormTitle')
+    .getElementById(
+      'petugasFormTitle'
+    )
     .textContent =
       'Tambah Petugas Baru';
 
 
   document
-    .getElementById('petugasSubmitBtn')
+    .getElementById(
+      'petugasSubmitBtn'
+    )
     .textContent =
       'Simpan Petugas';
 
 
   document
-    .getElementById('petugasCancelEdit')
+    .getElementById(
+      'petugasCancelEdit'
+    )
     .style.display =
       'none';
+
 }
 
 
@@ -2053,48 +3302,59 @@ function deletePetugas(id){
 
   const list =
     loadPetugas()
-    .filter(
-      p=>p.id!==id
-    );
+      .filter(
+        p => p.id !== id
+      );
 
 
   savePetugas(list);
 
+
   renderPetugasTable();
 
 
-  if(currentView==='petugas-kontak')
+  if(
+    currentView ===
+    'petugas-kontak'
+  ){
+
     renderKontakGrid();
+
+  }
+
 }
 
 
 document
-  .getElementById('petugasForm')
+  .getElementById(
+    'petugasForm'
+  )
   .addEventListener(
     'submit',
-    (e)=>{
+    e=>{
 
       e.preventDefault();
 
 
       const id =
         document
-        .getElementById(
-          'petugasEditId'
-        )
-        .value;
+          .getElementById(
+            'petugasEditId'
+          )
+          .value;
 
 
       const nama =
         document
-        .getElementById(
-          'petugasNama'
-        )
-        .value
-        .trim();
+          .getElementById(
+            'petugasNama'
+          )
+          .value
+          .trim();
 
 
-      if(!nama) return;
+      if(!nama)
+        return;
 
 
       const data = {
@@ -2106,27 +3366,27 @@ document
 
         telepon:
           document
-          .getElementById(
-            'petugasTelepon'
-          )
-          .value
-          .trim(),
+            .getElementById(
+              'petugasTelepon'
+            )
+            .value
+            .trim(),
 
         email:
           document
-          .getElementById(
-            'petugasEmail'
-          )
-          .value
-          .trim(),
+            .getElementById(
+              'petugasEmail'
+            )
+            .value
+            .trim(),
 
         unit:
           document
-          .getElementById(
-            'petugasUnit'
-          )
-          .value
-          .trim()
+            .getElementById(
+              'petugasUnit'
+            )
+            .value
+            .trim()
 
       };
 
@@ -2140,7 +3400,7 @@ document
         list =
           list.map(
             p =>
-              p.id===id
+              p.id === id
                 ? data
                 : p
           );
@@ -2148,6 +3408,7 @@ document
       }else{
 
         list.push(data);
+
       }
 
 
@@ -2174,6 +3435,7 @@ document
 function renderPetugasKontakView(){
 
   renderKontakGrid();
+
 }
 
 
@@ -2195,6 +3457,7 @@ function renderKontakGrid(){
       '<div class="empty-mini">Belum ada petugas terdaftar. Tambahkan lewat menu "Tambah Petugas".</div>';
 
     return;
+
   }
 
 
@@ -2204,40 +3467,61 @@ function renderKontakGrid(){
       <div class="kontak-card">
 
         <div class="kname">
+
           ${esc(p.nama)}
+
         </div>
 
+
         <div class="krow">
+
           <b>Telepon:</b>
-          ${esc(p.telepon)||'—'}
+
+          ${esc(p.telepon) || '—'}
+
         </div>
 
+
         <div class="krow">
+
           <b>Email:</b>
-          ${esc(p.email)||'—'}
+
+          ${esc(p.email) || '—'}
+
         </div>
 
+
         <div class="krow">
+
           <b>Unit:</b>
-          ${esc(p.unit)||'—'}
+
+          ${esc(p.unit) || '—'}
+
         </div>
 
       </div>
 
     `).join('');
+
 }
 
+
+/* =========================================================
+   GRAFIK PETUGAS
+   ========================================================= */
 
 function renderPetugasGrafikView(){
 
   const counts = {};
+
 
   rows.forEach(r=>{
 
     if(r.petugas){
 
       counts[r.petugas] =
-        (counts[r.petugas]||0)+1;
+        (counts[r.petugas] || 0) + 1;
+
     }
 
   });
@@ -2245,8 +3529,11 @@ function renderPetugasGrafikView(){
 
   const entries =
     Object.entries(counts)
-    .sort((a,b)=>b[1]-a[1])
-    .slice(0,12);
+      .sort(
+        (a,b)=>
+          b[1] - a[1]
+      )
+      .slice(0,12);
 
 
   if(petugasChart)
@@ -2265,14 +3552,19 @@ function renderPetugasGrafikView(){
         data:{
 
           labels:
-            entries.map(e=>e[0]),
+            entries.map(
+              e=>e[0]
+            ),
 
           datasets:[{
 
-            label:'Jumlah Pekerjaan',
+            label:
+              'Jumlah Pekerjaan',
 
             data:
-              entries.map(e=>e[1]),
+              entries.map(
+                e=>e[1]
+              ),
 
             backgroundColor:
               '#5aa4f5'
@@ -2288,14 +3580,17 @@ function renderPetugasGrafikView(){
           responsive:true,
 
           plugins:{
+
             legend:{
               display:false
             }
+
           },
 
           scales:{
 
             x:{
+
               grid:{
                 color:'#233a5e'
               },
@@ -2306,9 +3601,11 @@ function renderPetugasGrafikView(){
               },
 
               beginAtZero:true
+
             },
 
             y:{
+
               grid:{
                 display:false
               },
@@ -2319,6 +3616,7 @@ function renderPetugasGrafikView(){
                   size:11
                 }
               }
+
             }
 
           }
@@ -2327,6 +3625,7 @@ function renderPetugasGrafikView(){
 
       }
     );
+
 }
 
 
@@ -2341,34 +3640,48 @@ function renderDirektoriView(){
 
   rows.forEach(r=>{
 
-    if(!r.perangkat) return;
+    if(!r.perangkat)
+      return;
 
 
-    if(!byDevice[r.perangkat]){
+    if(
+      !byDevice[r.perangkat]
+    ){
 
       byDevice[r.perangkat] = {
+
         count:0,
+
         latest:null
+
       };
 
     }
 
 
-    byDevice[r.perangkat].count++;
+    byDevice[
+      r.perangkat
+    ].count++;
 
 
     if(
-      !byDevice[r.perangkat].latest ||
+      !byDevice[
+        r.perangkat
+      ].latest ||
+
       (
         r._date &&
         r._date >
-        byDevice[r.perangkat]
-          .latest._date
+        byDevice[
+          r.perangkat
+        ].latest._date
       )
     ){
 
-      byDevice[r.perangkat]
-        .latest = r;
+      byDevice[
+        r.perangkat
+      ].latest = r;
+
     }
 
   });
@@ -2381,7 +3694,9 @@ function renderDirektoriView(){
 
 
   const entries =
-    Object.entries(byDevice);
+    Object.entries(
+      byDevice
+    );
 
 
   if(!entries.length){
@@ -2390,6 +3705,7 @@ function renderDirektoriView(){
       '<tr><td colspan="5" class="empty-mini">Belum ada data perangkat.</td></tr>';
 
     return;
+
   }
 
 
@@ -2397,67 +3713,85 @@ function renderDirektoriView(){
     entries.map(
       ([name,info])=>`
 
-      <tr>
+        <tr>
 
-        <td>
-          ${esc(name)}
-        </td>
+          <td>
+            ${esc(name)}
+          </td>
 
-        <td>
-          ${esc(
-            info.latest.ulp ||
-            info.latest.lokasi ||
-            '—'
-          )}
-        </td>
 
-        <!-- DIPERBAIKI -->
-        <td>
-          ${fmtDate(
-            info.latest._date,
-            info.latest.timestamp
-          )}
-        </td>
+          <td>
+            ${esc(
+              info.latest.ulp ||
+              info.latest.lokasi ||
+              '—'
+            )}
+          </td>
 
-        <td>
-          ${info.count}
-        </td>
 
-        <td>
+          <td>
 
-          ${
-            info.latest.dokumentasi
+            ${fmtDate(
+              info.latest._date,
+              info.latest.timestamp
+            )}
 
-              ? `<a
-                  class="link-btn"
-                  href="${esc(info.latest.dokumentasi)}"
-                  target="_blank"
-                  rel="noopener">
-                  ↗ Buka
-                </a>`
+          </td>
 
-              : '—'
-          }
 
-        </td>
+          <td>
+            ${info.count}
+          </td>
 
-      </tr>
 
-    `).join('');
+          <td>
+
+            ${
+              info.latest.dokumentasi
+
+                ? `<a
+                    class="link-btn"
+                    href="${esc(info.latest.dokumentasi)}"
+                    target="_blank"
+                    rel="noopener">
+
+                    ↗ Buka
+
+                  </a>`
+
+                : '—'
+            }
+
+          </td>
+
+        </tr>
+
+      `
+    ).join('');
+
 }
 
 
 /* =========================================================
-   KELOLA DATA
+   LOG PEKERJAAN
    ========================================================= */
 
 function renderKelolaDataView(){
 
-  renderKelolaTable(rows);
+  renderKelolaTable(
+    rows
+  );
+
 }
 
 
-function renderKelolaTable(source){
+/* =========================================================
+   RENDER TABEL LOG PEKERJAAN
+   ========================================================= */
+
+function renderKelolaTable(
+  source
+){
 
   const tbody =
     document.querySelector(
@@ -2467,19 +3801,20 @@ function renderKelolaTable(source){
 
   const sorted =
     [...source]
-    .sort(
-      (a,b)=>
-        (b._date?.getTime()||0) -
-        (a._date?.getTime()||0)
-    );
+      .sort(
+        (a,b)=>
+          (b._date?.getTime() || 0) -
+          (a._date?.getTime() || 0)
+      );
 
 
   if(!sorted.length){
 
     tbody.innerHTML =
-      '<tr><td colspan="7" class="empty-mini">Belum ada data.</td></tr>';
+      '<tr><td colspan="8" class="empty-mini">Belum ada data pekerjaan.</td></tr>';
 
     return;
+
   }
 
 
@@ -2488,89 +3823,168 @@ function renderKelolaTable(source){
 
       <tr>
 
-        <!-- DIPERBAIKI -->
+        <!-- TANGGAL + JAM -->
+
         <td>
+
           ${fmtDate(
             r._date,
             r.timestamp
           )}
+
         </td>
 
-        <td>
-          ${esc(r.up3)||'—'}
-        </td>
+
+        <!-- UP3 -->
 
         <td>
-          ${esc(r.ulp)||'—'}
+
+          ${esc(
+            r.up3
+          ) || '—'}
+
         </td>
 
-        <td>
-          ${esc(r.perangkat)||'—'}
-        </td>
+
+        <!-- ULP -->
 
         <td>
-          ${esc(r.pekerjaan)||'—'}
+
+          ${esc(
+            r.ulp
+          ) || '—'}
+
         </td>
 
-        <td>
-          ${esc(r.lokasi)||'—'}
-        </td>
+
+        <!-- PERANGKAT -->
 
         <td>
-          ${esc(r.petugas)||'—'}
+
+          ${esc(
+            r.perangkat
+          ) || '—'}
+
+        </td>
+
+
+        <!-- PEKERJAAN -->
+
+        <td>
+
+          ${esc(
+            r.pekerjaan
+          ) || '—'}
+
+        </td>
+
+
+        <!-- LOKASI -->
+
+        <td>
+
+          ${esc(
+            r.lokasi
+          ) || '—'}
+
+        </td>
+
+
+        <!-- PETUGAS -->
+
+        <td>
+
+          ${esc(
+            r.petugas
+          ) || '—'}
+
+        </td>
+
+
+        <!-- DOKUMENTASI -->
+
+        <td>
+
+          ${documentationHtml(
+            r.dokumentasi,
+            r.pekerjaan ||
+            'Dokumentasi CCTV'
+          )}
+
         </td>
 
       </tr>
 
     `).join('');
+
+
+  /*
+   * Aktifkan klik gambar
+   */
+
+  bindDocumentationImages();
+
 }
 
 
+/* =========================================================
+   SEARCH LOG PEKERJAAN
+   ========================================================= */
+
 document
-  .getElementById('kelolaSearch')
+  .getElementById(
+    'kelolaSearch'
+  )
   .addEventListener(
     'input',
-    (e)=>{
+    e=>{
 
       const q =
         e.target.value
-        .trim()
-        .toLowerCase();
+          .trim()
+          .toLowerCase();
 
 
       const source =
         q
 
-          ? rows.filter(
-              r =>
-                [
-                  r.pekerjaan,
-                  r.petugas,
-                  r.lokasi,
-                  r.perangkat,
-                  r.up3,
-                  r.ulp
-                ]
-                .join(' ')
-                .toLowerCase()
-                .includes(q)
+          ? rows.filter(r=>
+              [
+
+                r.timestamp,
+                r.pekerjaan,
+                r.petugas,
+                r.lokasi,
+                r.perangkat,
+                r.up3,
+                r.ulp,
+                r.dokumentasi
+
+              ]
+              .join(' ')
+              .toLowerCase()
+              .includes(q)
             )
 
           : rows;
 
 
-      renderKelolaTable(source);
+      renderKelolaTable(
+        source
+      );
 
     }
   );
 
 
 /* =========================================================
-   EXPORT DATA
+   EXPORT LOG PEKERJAAN
    ========================================================= */
 
 document
-  .getElementById('kelolaExportBtn')
+  .getElementById(
+    'kelolaExportBtn'
+  )
   .addEventListener(
     'click',
     ()=>{
@@ -2580,7 +3994,6 @@ document
 
           rows.map(r=>({
 
-            // DIPERBAIKI
             Tanggal:
               fmtDate(
                 r._date,
@@ -2588,22 +4001,25 @@ document
               ),
 
             'Unit UP3':
-              r.up3||'',
+              r.up3 || '',
 
             'Unit ULP':
-              r.ulp||'',
+              r.ulp || '',
 
             Perangkat:
-              r.perangkat||'',
+              r.perangkat || '',
 
             Pekerjaan:
-              r.pekerjaan||'',
+              r.pekerjaan || '',
 
             Lokasi:
-              r.lokasi||'',
+              r.lokasi || '',
 
             Petugas:
-              r.petugas||''
+              r.petugas || '',
+
+            Dokumentasi:
+              r.dokumentasi || ''
 
           }))
 
@@ -2612,12 +4028,16 @@ document
 
       downloadCsv(
         csv,
-        'kelola-data.csv'
+        'log-pekerjaan.csv'
       );
 
     }
   );
 
+
+/* =========================================================
+   DOWNLOAD CSV
+   ========================================================= */
 
 function downloadCsv(
   csvText,
@@ -2635,26 +4055,42 @@ function downloadCsv(
 
 
   const url =
-    URL.createObjectURL(blob);
+    URL.createObjectURL(
+      blob
+    );
 
 
   const a =
-    document.createElement('a');
+    document.createElement(
+      'a'
+    );
 
 
-  a.href = url;
+  a.href =
+    url;
 
-  a.download = filename;
+
+  a.download =
+    filename;
 
 
-  document.body.appendChild(a);
+  document.body.appendChild(
+    a
+  );
+
 
   a.click();
 
-  document.body.removeChild(a);
+
+  document.body.removeChild(
+    a
+  );
 
 
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(
+    url
+  );
+
 }
 
 
@@ -2674,11 +4110,13 @@ function renderRekapView(){
     Array.from(
       new Set(
         rows
-        .filter(r=>r._date)
-        .map(
-          r =>
-            `${r._date.getFullYear()}-${r._date.getMonth()}`
-        )
+          .filter(
+            r=>r._date
+          )
+          .map(
+            r =>
+              `${r._date.getFullYear()}-${r._date.getMonth()}`
+          )
       )
     )
     .sort()
@@ -2690,14 +4128,23 @@ function renderRekapView(){
 
     months.map(m=>{
 
-      const [y,mo] =
-        m.split('-').map(Number);
+      const [
+        y,
+        mo
+      ] =
+        m
+          .split('-')
+          .map(Number);
 
 
       return `
+
         <option value="${m}">
+
           ${BULAN_ID[mo]} ${y}
+
         </option>
+
       `;
 
     }).join('');
@@ -2708,19 +4155,23 @@ function renderRekapView(){
 
 
   renderRekapTable();
+
 }
 
 
 function renderRekapTable(){
 
   const sel =
-    document.getElementById(
-      'rekapBulan'
-    ).value || 'all';
+    document
+      .getElementById(
+        'rekapBulan'
+      )
+      .value ||
+      'all';
 
 
   const source =
-    sel==='all'
+    sel === 'all'
 
       ? rows
 
@@ -2730,15 +4181,18 @@ function renderRekapTable(){
             return false;
 
 
-          const [y,mo] =
+          const [
+            y,
+            mo
+          ] =
             sel
-            .split('-')
-            .map(Number);
+              .split('-')
+              .map(Number);
 
 
           return
-            r._date.getFullYear()===y &&
-            r._date.getMonth()===mo;
+            r._date.getFullYear() === y &&
+            r._date.getMonth() === mo;
 
         });
 
@@ -2751,7 +4205,8 @@ function renderRekapTable(){
     if(r.pekerjaan){
 
       counts[r.pekerjaan] =
-        (counts[r.pekerjaan]||0)+1;
+        (counts[r.pekerjaan] || 0) + 1;
+
     }
 
   });
@@ -2759,7 +4214,10 @@ function renderRekapTable(){
 
   const entries =
     Object.entries(counts)
-    .sort((a,b)=>b[1]-a[1]);
+      .sort(
+        (a,b)=>
+          b[1] - a[1]
+      );
 
 
   const tbody =
@@ -2782,11 +4240,14 @@ function renderRekapTable(){
           .join('')
 
       : '<tr><td colspan="2" class="empty-mini">Tidak ada data pada periode ini.</td></tr>';
+
 }
 
 
 document
-  .getElementById('rekapExportBtn')
+  .getElementById(
+    'rekapExportBtn'
+  )
   .addEventListener(
     'click',
     ()=>{
@@ -2803,17 +4264,21 @@ document
         .map(tr=>{
 
           const tds =
-            tr.querySelectorAll('td');
+            tr.querySelectorAll(
+              'td'
+            );
 
 
-          return tds.length===2
+          return tds.length === 2
 
             ? {
+
                 Kategori:
                   tds[0].textContent,
 
                 Jumlah:
                   tds[1].textContent
+
               }
 
             : null;
@@ -2823,12 +4288,16 @@ document
         .filter(Boolean);
 
 
-      if(!rowsForExport.length)
+      if(
+        !rowsForExport.length
+      )
         return;
 
 
       downloadCsv(
-        Papa.unparse(rowsForExport),
+        Papa.unparse(
+          rowsForExport
+        ),
         'rekap-laporan.csv'
       );
 
@@ -2849,18 +4318,25 @@ function loadProfile(){
         STORAGE_PROFILE_KEY
       )
     ) || {
+
       nama:'Admin',
+
       role:'K3 Supervisor'
+
     };
 
   }catch(e){
 
     return {
+
       nama:'Admin',
+
       role:'K3 Supervisor'
+
     };
 
   }
+
 }
 
 
@@ -2871,26 +4347,38 @@ function applyProfileToSidebar(){
 
 
   document
-    .getElementById('profileName')
+    .getElementById(
+      'profileName'
+    )
     .textContent =
-      p.nama || 'Admin';
+      p.nama ||
+      'Admin';
 
 
   document
-    .getElementById('profileRole')
+    .getElementById(
+      'profileRole'
+    )
     .textContent =
-      p.role || 'K3 Supervisor';
+      p.role ||
+      'K3 Supervisor';
 
 
   document
-    .getElementById('avatarInitial')
+    .getElementById(
+      'avatarInitial'
+    )
     .textContent =
+
       (
-        p.nama || 'A'
+        p.nama ||
+        'A'
       )
       .trim()
       .charAt(0)
-      .toUpperCase() || 'A';
+      .toUpperCase() ||
+      'A';
+
 }
 
 
@@ -2901,23 +4389,30 @@ function renderProfilView(){
 
 
   document
-    .getElementById('profilNama')
+    .getElementById(
+      'profilNama'
+    )
     .value =
       p.nama || '';
 
 
   document
-    .getElementById('profilRole')
+    .getElementById(
+      'profilRole'
+    )
     .value =
       p.role || '';
+
 }
 
 
 document
-  .getElementById('profilForm')
+  .getElementById(
+    'profilForm'
+  )
   .addEventListener(
     'submit',
-    (e)=>{
+    e=>{
 
       e.preventDefault();
 
@@ -2926,20 +4421,20 @@ document
 
         nama:
           document
-          .getElementById(
-            'profilNama'
-          )
-          .value
-          .trim() ||
+            .getElementById(
+              'profilNama'
+            )
+            .value
+            .trim() ||
           'Admin',
 
         role:
           document
-          .getElementById(
-            'profilRole'
-          )
-          .value
-          .trim() ||
+            .getElementById(
+              'profilRole'
+            )
+            .value
+            .trim() ||
           'K3 Supervisor'
 
       };
@@ -2964,6 +4459,7 @@ document
 function renderKalenderView(){
 
   renderCalendar();
+
 }
 
 
@@ -2972,27 +4468,35 @@ function renderCalendar(){
   const year =
     calCursor.getFullYear();
 
+
   const month =
     calCursor.getMonth();
 
 
+  const monthsFull = [
+
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember'
+
+  ];
+
+
   document
-    .getElementById('calLabel')
+    .getElementById(
+      'calLabel'
+    )
     .textContent =
-      `${[
-        'Januari',
-        'Februari',
-        'Maret',
-        'April',
-        'Mei',
-        'Juni',
-        'Juli',
-        'Agustus',
-        'September',
-        'Oktober',
-        'November',
-        'Desember'
-      ][month]} ${year}`;
+      `${monthsFull[month]} ${year}`;
 
 
   const countByDay = {};
@@ -3001,16 +4505,21 @@ function renderCalendar(){
   rows.forEach(r=>{
 
     if(
+
       r._date &&
-      r._date.getFullYear()===year &&
-      r._date.getMonth()===month
+
+      r._date.getFullYear() === year &&
+
+      r._date.getMonth() === month
+
     ){
 
       const d =
         r._date.getDate();
 
+
       countByDay[d] =
-        (countByDay[d]||0)+1;
+        (countByDay[d] || 0) + 1;
 
     }
 
@@ -3028,7 +4537,7 @@ function renderCalendar(){
   const daysInMonth =
     new Date(
       year,
-      month+1,
+      month + 1,
       0
     ).getDate();
 
@@ -3038,7 +4547,9 @@ function renderCalendar(){
 
 
   let cells =
+
     [
+
       'Min',
       'Sen',
       'Sel',
@@ -3046,7 +4557,9 @@ function renderCalendar(){
       'Kam',
       'Jum',
       'Sab'
+
     ]
+
     .map(
       d =>
         `<div class="cal-dow">${d}</div>`
@@ -3062,6 +4575,7 @@ function renderCalendar(){
 
     cells +=
       '<div class="cal-day empty"></div>';
+
   }
 
 
@@ -3072,15 +4586,16 @@ function renderCalendar(){
   ){
 
     const isToday =
-      today.getFullYear()===year &&
-      today.getMonth()===month &&
-      today.getDate()===d;
+
+      today.getFullYear() === year &&
+      today.getMonth() === month &&
+      today.getDate() === d;
 
 
     cells += `
 
       <div
-        class="cal-day${isToday?' today':''}"
+        class="cal-day${isToday ? ' today' : ''}"
         data-day="${d}">
 
         <span class="dnum">
@@ -3089,15 +4604,18 @@ function renderCalendar(){
 
         ${
           countByDay[d]
+
             ? `<span class="dcount">
                 ${countByDay[d]}
               </span>`
+
             : ''
         }
 
       </div>
 
     `;
+
   }
 
 
@@ -3120,16 +4638,21 @@ function renderCalendar(){
       cell.addEventListener(
         'click',
         ()=>showCalDayDetail(
+
           year,
+
           month,
+
           parseInt(
             cell.dataset.day,
             10
           )
+
         )
       );
 
     });
+
 }
 
 
@@ -3142,34 +4665,42 @@ function showCalDayDetail(
   const dayRows =
     rows.filter(
       r =>
+
         r._date &&
-        r._date.getFullYear()===year &&
-        r._date.getMonth()===month &&
-        r._date.getDate()===day
+
+        r._date.getFullYear() === year &&
+
+        r._date.getMonth() === month &&
+
+        r._date.getDate() === day
+
     );
 
 
+  const monthsFull = [
+
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember'
+
+  ];
+
+
   document
-    .getElementById('calDayTitle')
+    .getElementById(
+      'calDayTitle'
+    )
     .textContent =
-      `${day} ${
-        [
-          'Januari',
-          'Februari',
-          'Maret',
-          'April',
-          'Mei',
-          'Juni',
-          'Juli',
-          'Agustus',
-          'September',
-          'Oktober',
-          'November',
-          'Desember'
-        ][month]
-      } ${year} · ${
-        dayRows.length
-      } pekerjaan`;
+      `${day} ${monthsFull[month]} ${year} · ${dayRows.length} pekerjaan`;
 
 
   const el =
@@ -3179,6 +4710,7 @@ function showCalDayDetail(
 
 
   el.innerHTML =
+
     dayRows.length
 
       ? dayRows
@@ -3189,28 +4721,40 @@ function showCalDayDetail(
               <div>
 
                 <div class="rname">
-                  ${esc(r.pekerjaan)||'—'}
+
+                  ${esc(
+                    r.pekerjaan
+                  ) || '—'}
+
                 </div>
 
+
                 <div class="rloc">
+
                   ${esc(
                     r.lokasi ||
                     r.ulp ||
                     '—'
                   )}
+
                   ·
+
                   ${esc(
                     r.petugas
-                  )||'—'}
+                  ) || '—'}
+
                 </div>
 
               </div>
+
 
               <span
                 class="badge"
                 style="background:${colorFor(r.pekerjaan)}">
 
-                ${esc(r.pekerjaan)||'—'}
+                ${esc(
+                  r.pekerjaan
+                ) || '—'}
 
               </span>
 
@@ -3220,21 +4764,29 @@ function showCalDayDetail(
           .join('')
 
       : '<div class="empty-mini">Tidak ada pekerjaan pada tanggal ini.</div>';
+
 }
 
 
 document
-  .getElementById('calPrev')
+  .getElementById(
+    'calPrev'
+  )
   .addEventListener(
     'click',
     ()=>{
 
       calCursor =
         new Date(
+
           calCursor.getFullYear(),
-          calCursor.getMonth()-1,
+
+          calCursor.getMonth() - 1,
+
           1
+
         );
+
 
       renderCalendar();
 
@@ -3243,17 +4795,24 @@ document
 
 
 document
-  .getElementById('calNext')
+  .getElementById(
+    'calNext'
+  )
   .addEventListener(
     'click',
     ()=>{
 
       calCursor =
         new Date(
+
           calCursor.getFullYear(),
-          calCursor.getMonth()+1,
+
+          calCursor.getMonth() + 1,
+
           1
+
         );
+
 
       renderCalendar();
 
@@ -3268,28 +4827,68 @@ document
 const FAQ_ITEMS = [
 
   {
-    q:'Bagaimana cara memuat data ke dashboard?',
-    a:'Buka ikon ⚙ (Sumber Data) di kanan atas, lalu pilih salah satu cara: unggah file spreadsheet, tempel URL CSV/Apps Script otomatis, atau tempel data CSV secara manual.'
+
+    q:
+      'Bagaimana cara memuat data ke dashboard?',
+
+    a:
+      'Buka ikon ⚙ (Sumber Data) di kanan atas, lalu pilih salah satu cara: unggah file spreadsheet, tempel URL CSV/Apps Script otomatis, atau tempel data CSV secara manual.'
+
   },
 
-  {
-    q:'Apakah data diperbarui otomatis?',
-    a:'Ya, jika kamu menggunakan opsi "Sumber otomatis (live)" dengan URL CSV, dashboard akan menyegarkan data setiap 5 menit secara otomatis, dan juga bisa disegarkan manual lewat tombol "Segarkan sekarang".'
-  },
 
   {
-    q:'Ke mana data petugas dan profil disimpan?',
-    a:'Data petugas dan profil admin disimpan langsung di browser (localStorage), bukan di spreadsheet. Artinya data ini khusus untuk perangkat/browser yang dipakai.'
+
+    q:
+      'Apakah data diperbarui otomatis?',
+
+    a:
+      'Ya, jika kamu menggunakan opsi "Sumber otomatis (live)" dengan URL CSV, dashboard akan menyegarkan data setiap 5 menit secara otomatis, dan juga bisa disegarkan manual lewat tombol "Segarkan sekarang".'
+
   },
 
-  {
-    q:'Bagaimana cara menambahkan koordinat di Peta Wilayah?',
-    a:'Buka menu "Peta Wilayah", isi kolom Latitude dan Longitude pada baris lokasi yang sesuai, lalu data akan otomatis tersimpan di browser.'
-  },
 
   {
-    q:'Kenapa grafik terlihat kosong?',
-    a:'Grafik akan kosong jika belum ada data yang dimuat, atau data yang dimuat tidak memiliki kolom Timestamp/Nama Pekerjaan yang valid. Periksa kembali format kolom di sumber data.'
+
+    q:
+      'Ke mana data petugas dan profil disimpan?',
+
+    a:
+      'Data petugas dan profil admin disimpan langsung di browser (localStorage), bukan di spreadsheet. Artinya data ini khusus untuk perangkat/browser yang dipakai.'
+
+  },
+
+
+  {
+
+    q:
+      'Bagaimana dokumentasi pekerjaan ditampilkan?',
+
+    a:
+      'Jika kolom Dokumentasi pada spreadsheet berisi link gambar atau link Google Drive yang dapat diakses, sistem akan mencoba menampilkan gambar langsung pada menu Log Pekerjaan. Jika gambar tidak dapat dimuat, tersedia tombol Buka Dokumentasi.'
+
+  },
+
+
+  {
+
+    q:
+      'Bagaimana cara menambahkan koordinat di Peta Wilayah?',
+
+    a:
+      'Buka menu "Peta Wilayah", isi kolom Latitude dan Longitude pada baris lokasi yang sesuai, lalu data akan otomatis tersimpan di browser.'
+
+  },
+
+
+  {
+
+    q:
+      'Kenapa grafik terlihat kosong?',
+
+    a:
+      'Grafik akan kosong jika belum ada data yang dimuat, atau data yang dimuat tidak memiliki kolom Timestamp/Nama Pekerjaan yang valid. Periksa kembali format kolom di sumber data.'
+
   }
 
 ];
@@ -3305,32 +4904,33 @@ function renderFaqView(){
 
   el.innerHTML =
     FAQ_ITEMS
-    .map(
-      (f,i)=>`
+      .map(
+        (f,i)=>`
 
-        <div
-          class="faq-item"
-          data-i="${i}">
+          <div
+            class="faq-item"
+            data-i="${i}">
 
-          <div class="faq-q">
+            <div class="faq-q">
 
-            ${esc(f.q)}
+              ${esc(f.q)}
 
-            <span>+</span>
+              <span>+</span>
+
+            </div>
+
+
+            <div class="faq-a">
+
+              ${esc(f.a)}
+
+            </div>
 
           </div>
 
-          <div class="faq-a">
-
-            ${esc(f.a)}
-
-          </div>
-
-        </div>
-
-      `
-    )
-    .join('');
+        `
+      )
+      .join('');
 
 
   el
@@ -3340,16 +4940,21 @@ function renderFaqView(){
     .forEach(item=>{
 
       item
-        .querySelector('.faq-q')
+        .querySelector(
+          '.faq-q'
+        )
         .addEventListener(
           'click',
           () =>
             item
               .classList
-              .toggle('open')
+              .toggle(
+                'open'
+              )
         );
 
     });
+
 }
 
 
@@ -3367,7 +4972,8 @@ function renderMetrikUnitView(){
     if(r.ulp){
 
       counts[r.ulp] =
-        (counts[r.ulp]||0)+1;
+        (counts[r.ulp] || 0) + 1;
+
     }
 
   });
@@ -3375,9 +4981,10 @@ function renderMetrikUnitView(){
 
   const entries =
     Object.entries(counts)
-    .sort(
-      (a,b)=>b[1]-a[1]
-    );
+      .sort(
+        (a,b)=>
+          b[1] - a[1]
+      );
 
 
   if(unitChart)
@@ -3396,7 +5003,9 @@ function renderMetrikUnitView(){
         data:{
 
           labels:
-            entries.map(e=>e[0]),
+            entries.map(
+              e=>e[0]
+            ),
 
           datasets:[{
 
@@ -3404,7 +5013,9 @@ function renderMetrikUnitView(){
               'Total Pekerjaan',
 
             data:
-              entries.map(e=>e[1]),
+              entries.map(
+                e=>e[1]
+              ),
 
             backgroundColor:
               '#3fae8f'
@@ -3418,35 +5029,54 @@ function renderMetrikUnitView(){
           responsive:true,
 
           plugins:{
+
             legend:{
               display:false
             }
+
           },
 
           scales:{
 
             x:{
+
               grid:{
                 display:false
               },
 
               ticks:{
-                color:'#93a6c4',
-                font:{size:11}
+
+                color:
+                  '#93a6c4',
+
+                font:{
+                  size:11
+                }
+
               }
+
             },
 
             y:{
+
               grid:{
-                color:'#233a5e'
+
+                color:
+                  '#233a5e'
+
               },
 
               ticks:{
-                color:'#93a6c4',
+
+                color:
+                  '#93a6c4',
+
                 precision:0
+
               },
 
               beginAtZero:true
+
             }
 
           }
@@ -3464,6 +5094,7 @@ function renderMetrikUnitView(){
 
 
   tbody.innerHTML =
+
     entries.length
 
       ? entries
@@ -3477,22 +5108,25 @@ function renderMetrikUnitView(){
           .join('')
 
       : '<tr><td colspan="2" class="empty-mini">Belum ada data.</td></tr>';
+
 }
 
 
 /* =========================================================
-   METRIK AKUMULASI
+   AKUMULASI
    ========================================================= */
 
 function renderMetrikAkumulasiView(){
 
   const sorted =
     [...rows]
-    .filter(r=>r._date)
-    .sort(
-      (a,b)=>
-        a._date-b._date
-    );
+      .filter(
+        r=>r._date
+      )
+      .sort(
+        (a,b)=>
+          a._date - b._date
+      );
 
 
   const labels = [];
@@ -3507,10 +5141,6 @@ function renderMetrikAkumulasiView(){
     running++;
 
 
-    /*
-     * Gunakan Timestamp asli
-     * agar label grafik juga tidak kehilangan jam.
-     */
     labels.push(
       fmtDate(
         r._date,
@@ -3573,36 +5203,56 @@ function renderMetrikAkumulasiView(){
           responsive:true,
 
           plugins:{
+
             legend:{
               display:false
             }
+
           },
 
           scales:{
 
             x:{
+
               grid:{
                 display:false
               },
 
               ticks:{
-                color:'#93a6c4',
+
+                color:
+                  '#93a6c4',
+
                 maxTicksLimit:8,
-                font:{size:10}
+
+                font:{
+                  size:10
+                }
+
               }
+
             },
 
             y:{
+
               grid:{
-                color:'#233a5e'
+
+                color:
+                  '#233a5e'
+
               },
 
               ticks:{
-                color:'#93a6c4',
+
+                color:
+                  '#93a6c4',
+
                 precision:0
+
               },
 
               beginAtZero:true
+
             }
 
           }
@@ -3611,11 +5261,12 @@ function renderMetrikAkumulasiView(){
 
       }
     );
+
 }
 
 
 /* =========================================================
-   PETA WILAYAH
+   PETA
    ========================================================= */
 
 function loadWilayahCoords(){
@@ -3631,7 +5282,9 @@ function loadWilayahCoords(){
   }catch(e){
 
     return {};
+
   }
+
 }
 
 
@@ -3641,6 +5294,7 @@ function saveWilayahCoords(map){
     STORAGE_WILAYAH_KEY,
     JSON.stringify(map)
   );
+
 }
 
 
@@ -3652,13 +5306,15 @@ function renderMetrikPetaView(){
   rows.forEach(r=>{
 
     const key =
-      r.ulp || r.lokasi;
+      r.ulp ||
+      r.lokasi;
 
 
     if(key){
 
       counts[key] =
-        (counts[key]||0)+1;
+        (counts[key] || 0) + 1;
+
     }
 
   });
@@ -3670,9 +5326,10 @@ function renderMetrikPetaView(){
 
   const entries =
     Object.entries(counts)
-    .sort(
-      (a,b)=>b[1]-a[1]
-    );
+      .sort(
+        (a,b)=>
+          b[1] - a[1]
+      );
 
 
   const tbody =
@@ -3687,6 +5344,7 @@ function renderMetrikPetaView(){
       '<tr><td colspan="5" class="empty-mini">Belum ada data wilayah.</td></tr>';
 
     return;
+
   }
 
 
@@ -3700,31 +5358,40 @@ function renderMetrikPetaView(){
 
         return `
 
-          <tr data-loc="${esc(loc)}">
+          <tr
+            data-loc="${esc(loc)}">
 
             <td>
               ${esc(loc)}
             </td>
 
+
             <td>
               ${n}
             </td>
 
+
             <td>
+
               <input
                 type="text"
                 class="lat-input"
-                value="${esc(c.lat||'')}"
+                value="${esc(c.lat || '')}"
                 placeholder="-3.99">
+
             </td>
 
+
             <td>
+
               <input
                 type="text"
                 class="lng-input"
-                value="${esc(c.lng||'')}"
+                value="${esc(c.lng || '')}"
                 placeholder="122.51">
+
             </td>
+
 
             <td>
 
@@ -3741,6 +5408,7 @@ function renderMetrikPetaView(){
           </tr>
 
         `;
+
       }
     ).join('');
 
@@ -3760,25 +5428,27 @@ function renderMetrikPetaView(){
 
 
           const tr =
-            btn.closest('tr');
+            btn.closest(
+              'tr'
+            );
 
 
           const lat =
             tr
-            .querySelector(
-              '.lat-input'
-            )
-            .value
-            .trim();
+              .querySelector(
+                '.lat-input'
+              )
+              .value
+              .trim();
 
 
           const lng =
             tr
-            .querySelector(
-              '.lng-input'
-            )
-            .value
-            .trim();
+              .querySelector(
+                '.lng-input'
+              )
+              .value
+              .trim();
 
 
           const map =
@@ -3786,8 +5456,11 @@ function renderMetrikPetaView(){
 
 
           map[loc] = {
+
             lat,
+
             lng
+
           };
 
 
@@ -3801,7 +5474,9 @@ function renderMetrikPetaView(){
 
 
           setTimeout(
-            ()=>btn.textContent='Simpan',
+            ()=>
+              btn.textContent =
+                'Simpan',
             1200
           );
 
@@ -3809,7 +5484,59 @@ function renderMetrikPetaView(){
       );
 
     });
+
 }
+
+
+/* =========================================================
+   MODAL DOKUMENTASI
+   ========================================================= */
+
+document
+  .getElementById(
+    'imageModalClose'
+  )
+  .addEventListener(
+    'click',
+    closeImageModal
+  );
+
+
+document
+  .getElementById(
+    'imageModal'
+  )
+  .addEventListener(
+    'click',
+    e=>{
+
+      if(
+        e.target.id ===
+        'imageModal'
+      ){
+
+        closeImageModal();
+
+      }
+
+    }
+  );
+
+
+document.addEventListener(
+  'keydown',
+  e=>{
+
+    if(
+      e.key === 'Escape'
+    ){
+
+      closeImageModal();
+
+    }
+
+  }
+);
 
 
 /* =========================================================
@@ -3817,6 +5544,10 @@ function renderMetrikPetaView(){
    ========================================================= */
 
 (function init(){
+
+  /*
+   * Theme
+   */
 
   if(
     localStorage.getItem(
@@ -3826,12 +5557,23 @@ function renderMetrikPetaView(){
 
     document.body
       .classList
-      .add('theme-light');
+      .add(
+        'theme-light'
+      );
+
   }
 
 
+  /*
+   * Profile
+   */
+
   applyProfileToSidebar();
 
+
+  /*
+   * Cache
+   */
 
   const hadCache =
     restoreRows();
@@ -3841,24 +5583,33 @@ function renderMetrikPetaView(){
 
     assignCategoryColors();
 
+
     setStatus(
       `${rows.length} baris dimuat dari sesi sebelumnya.`,
       'ok'
     );
+
   }
 
+
+  /*
+   * Render awal
+   */
 
   renderAll();
 
 
   /*
-   * Prioritas 1:
    * URL default
    */
+
   if(
+
     DEFAULT_SOURCE_URL &&
+
     DEFAULT_SOURCE_URL !==
       'TEMPEL_LINK_ANDA_DI_SINI'
+
   ){
 
     localStorage.setItem(
@@ -3895,14 +5646,16 @@ function renderMetrikPetaView(){
 
     startAutoRefresh();
 
+
     return;
+
   }
 
 
   /*
-   * Prioritas 2:
-   * URL yang pernah disimpan
+   * URL tersimpan
    */
+
   const savedUrl =
     localStorage.getItem(
       STORAGE_URL_KEY
@@ -3937,6 +5690,7 @@ function renderMetrikPetaView(){
   }else if(!hadCache){
 
     openDrawer();
+
   }
 
 })();
