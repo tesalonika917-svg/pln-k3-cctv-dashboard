@@ -3,36 +3,30 @@
    Semua data diproses di browser (client-side only).
    ========================================================= */
 
-/* =========================================================
-   KONFIGURASI — isi sekali di sini, dashboard akan otomatis
-   menarik data dari spreadsheet setiap kali dibuka, oleh
-   siapa pun, tanpa perlu upload/paste URL manual lagi.
-
-   Isi dengan salah satu:
-   - URL CSV publik dari "Publish to web" (…/pub?output=csv), atau
-   - URL Web App dari Apps Script (…/exec) — lihat apps-script.gs
-
-   Biarkan string kosong "" untuk kembali ke mode manual
-   (panel Sumber Data akan tampil seperti biasa).
-   ========================================================= */
-const CONFIG = {
-  SOURCE_URL: "",           // <-- tempel URL Anda di sini, di antara tanda kutip
-  AUTO_REFRESH_MINUTES: 5   // seberapa sering data disegarkan ulang otomatis
-};
-
 const HARI_ID = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
 const BULAN_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 
 const STORAGE_ROWS_KEY = 'plnk3-dashboard-rows';
 const STORAGE_URL_KEY  = 'plnk3-dashboard-source-url';
 const STORAGE_THEME_KEY = 'plnk3-dashboard-theme';
+const STORAGE_PETUGAS_KEY = 'plnk3-petugas-list';
+const STORAGE_PROFILE_KEY = 'plnk3-profile';
+const STORAGE_WILAYAH_KEY = 'plnk3-wilayah-coords';
 
 const CATEGORY_PALETTE = ['#f0b93f', '#e0704f', '#8b7fd6', '#3fae8f', '#5aa4f5', '#e3b98a'];
 
+/* =========================================================
+   ISI LINK SUMBER DATA DI SINI
+   (link CSV hasil "Publish to web" dari Google Sheet,
+    atau URL Google Apps Script Web App yang return JSON)
+   ========================================================= */
+const DEFAULT_SOURCE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQWRM7E3rtMsJVWf9z1cntdblP4nSP9p0QCC6DeEbVt_3MHbjicUDgP2AsgLPV-NaNAYH3YZfDwFXhI/pub?output=csv';
+
 let rows = [];
 let categoryColor = {};   // { "Pemeliharaan Rutin": "#f0b93f", ... }
-let lineChart, donutChart, barChart;
+let lineChart, donutChart, barChart, petugasChart, unitChart, akumulasiChart;
 let autoRefreshTimer = null;
+let calCursor = new Date(); // month currently shown in calendar
 
 /* ---------------- header normalization (same mapping as the sheet) ---------------- */
 const HEADER_MAP = {
@@ -68,6 +62,7 @@ function esc(s){
   if(s===undefined || s===null) return '';
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+function uid(){ return 'id' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
 function normalizeRows(raw){
   if(!raw || !raw.length) return [];
@@ -307,6 +302,8 @@ function renderAll(){
   renderDonutChart();
   renderBarChart();
   renderRecentList();
+  // refresh the currently visible secondary view too, so it's never stale
+  renderCurrentView();
 }
 
 /* ---------------- search (client-side highlight/filter across recent list) ---------------- */
@@ -410,10 +407,10 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
 
 function startAutoRefresh(){
   if(autoRefreshTimer) clearInterval(autoRefreshTimer);
-  autoRefreshTimer = setInterval(()=> refreshFromSavedSource(false), CONFIG.AUTO_REFRESH_MINUTES*60*1000);
+  autoRefreshTimer = setInterval(()=> refreshFromSavedSource(false), 5*60*1000);
 }
 async function refreshFromSavedSource(manual){
-  const url = CONFIG.SOURCE_URL || localStorage.getItem(STORAGE_URL_KEY);
+  const url = localStorage.getItem(STORAGE_URL_KEY);
   if(!url) return;
   try{
     if(manual) setStatus('Menyegarkan data…');
@@ -435,24 +432,493 @@ document.getElementById('sidebarToggle').addEventListener('click', ()=>{
   document.getElementById('sidebar').classList.toggle('collapsed');
 });
 
+/* =========================================================
+   VIEW SWITCHING (sidebar navigation)
+   ========================================================= */
+const VIEW_RENDERERS = {
+  'petugas-tambah': renderPetugasTambahView,
+  'petugas-kontak': renderPetugasKontakView,
+  'petugas-grafik': renderPetugasGrafikView,
+  'cctv-direktori': renderDirektoriView,
+  'data-kelola': renderKelolaDataView,
+  'laporan-rekap': renderRekapView,
+  'profil': renderProfilView,
+  'kalender': renderKalenderView,
+  'faq': renderFaqView,
+  'metrik-unit': renderMetrikUnitView,
+  'metrik-akumulasi': renderMetrikAkumulasiView,
+  'metrik-peta': renderMetrikPetaView
+};
+let currentView = 'dashboard';
+
+function showView(viewId){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const target = document.getElementById('view-' + viewId);
+  if(!target) return;
+  target.classList.add('active');
+  currentView = viewId;
+
+  document.querySelectorAll('.nav-link[data-view]').forEach(l=>{
+    l.classList.toggle('active', l.dataset.view === viewId);
+  });
+
+  if(VIEW_RENDERERS[viewId]) VIEW_RENDERERS[viewId]();
+}
+function renderCurrentView(){
+  if(currentView !== 'dashboard' && VIEW_RENDERERS[currentView]) VIEW_RENDERERS[currentView]();
+}
+
+document.querySelectorAll('.nav-link[data-view]').forEach(link=>{
+  link.addEventListener('click', (e)=>{
+    e.preventDefault();
+    showView(link.dataset.view);
+  });
+});
+
+/* =========================================================
+   DATA PETUGAS (Tambah Petugas / Info Kontak / Grafik Petugas)
+   ========================================================= */
+function loadPetugas(){
+  try{ return JSON.parse(localStorage.getItem(STORAGE_PETUGAS_KEY)) || []; }
+  catch(e){ return []; }
+}
+function savePetugas(list){
+  localStorage.setItem(STORAGE_PETUGAS_KEY, JSON.stringify(list));
+}
+
+function renderPetugasTambahView(){
+  renderPetugasTable();
+}
+function renderPetugasTable(){
+  const list = loadPetugas();
+  const tbody = document.querySelector('#petugasTable tbody');
+  if(!list.length){
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-mini">Belum ada petugas ditambahkan.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(p=>`
+    <tr>
+      <td>${esc(p.nama)}</td>
+      <td>${esc(p.telepon)||'—'}</td>
+      <td>${esc(p.email)||'—'}</td>
+      <td>${esc(p.unit)||'—'}</td>
+      <td>
+        <span class="link-btn" data-edit="${p.id}">Edit</span>
+        <span class="link-btn danger" data-del="${p.id}">Hapus</span>
+      </td>
+    </tr>
+  `).join('');
+  tbody.querySelectorAll('[data-edit]').forEach(el=>el.addEventListener('click', ()=>startEditPetugas(el.dataset.edit)));
+  tbody.querySelectorAll('[data-del]').forEach(el=>el.addEventListener('click', ()=>deletePetugas(el.dataset.del)));
+}
+function startEditPetugas(id){
+  const p = loadPetugas().find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('petugasEditId').value = p.id;
+  document.getElementById('petugasNama').value = p.nama || '';
+  document.getElementById('petugasTelepon').value = p.telepon || '';
+  document.getElementById('petugasEmail').value = p.email || '';
+  document.getElementById('petugasUnit').value = p.unit || '';
+  document.getElementById('petugasFormTitle').textContent = 'Edit Petugas';
+  document.getElementById('petugasSubmitBtn').textContent = 'Simpan Perubahan';
+  document.getElementById('petugasCancelEdit').style.display = 'inline-block';
+}
+function resetPetugasForm(){
+  document.getElementById('petugasForm').reset();
+  document.getElementById('petugasEditId').value = '';
+  document.getElementById('petugasFormTitle').textContent = 'Tambah Petugas Baru';
+  document.getElementById('petugasSubmitBtn').textContent = 'Simpan Petugas';
+  document.getElementById('petugasCancelEdit').style.display = 'none';
+}
+function deletePetugas(id){
+  const list = loadPetugas().filter(p=>p.id!==id);
+  savePetugas(list);
+  renderPetugasTable();
+  if(currentView==='petugas-kontak') renderKontakGrid();
+}
+document.getElementById('petugasForm').addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const id = document.getElementById('petugasEditId').value;
+  const nama = document.getElementById('petugasNama').value.trim();
+  if(!nama) return;
+  const data = {
+    id: id || uid(),
+    nama,
+    telepon: document.getElementById('petugasTelepon').value.trim(),
+    email: document.getElementById('petugasEmail').value.trim(),
+    unit: document.getElementById('petugasUnit').value.trim()
+  };
+  let list = loadPetugas();
+  if(id){ list = list.map(p => p.id===id ? data : p); }
+  else{ list.push(data); }
+  savePetugas(list);
+  resetPetugasForm();
+  renderPetugasTable();
+});
+document.getElementById('petugasCancelEdit').addEventListener('click', resetPetugasForm);
+
+function renderPetugasKontakView(){ renderKontakGrid(); }
+function renderKontakGrid(){
+  const list = loadPetugas();
+  const el = document.getElementById('kontakGrid');
+  if(!list.length){
+    el.innerHTML = '<div class="empty-mini">Belum ada petugas terdaftar. Tambahkan lewat menu "Tambah Petugas".</div>';
+    return;
+  }
+  el.innerHTML = list.map(p=>`
+    <div class="kontak-card">
+      <div class="kname">${esc(p.nama)}</div>
+      <div class="krow"><b>Telepon:</b> ${esc(p.telepon)||'—'}</div>
+      <div class="krow"><b>Email:</b> ${esc(p.email)||'—'}</div>
+      <div class="krow"><b>Unit:</b> ${esc(p.unit)||'—'}</div>
+    </div>
+  `).join('');
+}
+
+function renderPetugasGrafikView(){
+  const counts = {};
+  rows.forEach(r=>{ if(r.petugas) counts[r.petugas] = (counts[r.petugas]||0)+1; });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  if(petugasChart) petugasChart.destroy();
+  petugasChart = new Chart(document.getElementById('petugasChart'), {
+    type:'bar',
+    data:{
+      labels: entries.map(e=>e[0]),
+      datasets:[{ label:'Jumlah Pekerjaan', data: entries.map(e=>e[1]), backgroundColor:'#5aa4f5' }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true,
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ grid:{ color:'#233a5e' }, ticks:{ color:'#93a6c4', precision:0 }, beginAtZero:true },
+        y:{ grid:{ display:false }, ticks:{ color:'#93a6c4', font:{size:11} } }
+      }
+    }
+  });
+}
+
+/* =========================================================
+   MANAJEMEN PERANGKAT (Direktori CCTV / Kelola Data / Rekap Laporan)
+   ========================================================= */
+function renderDirektoriView(){
+  const byDevice = {};
+  rows.forEach(r=>{
+    if(!r.perangkat) return;
+    if(!byDevice[r.perangkat]) byDevice[r.perangkat] = { count:0, latest:null };
+    byDevice[r.perangkat].count++;
+    if(!byDevice[r.perangkat].latest || (r._date && r._date > byDevice[r.perangkat].latest._date)) byDevice[r.perangkat].latest = r;
+  });
+  const tbody = document.querySelector('#direktoriTable tbody');
+  const entries = Object.entries(byDevice);
+  if(!entries.length){ tbody.innerHTML = '<tr><td colspan="5" class="empty-mini">Belum ada data perangkat.</td></tr>'; return; }
+  tbody.innerHTML = entries.map(([name,info])=>`
+    <tr>
+      <td>${esc(name)}</td>
+      <td>${esc(info.latest.ulp || info.latest.lokasi || '—')}</td>
+      <td>${fmtDate(info.latest._date)}</td>
+      <td>${info.count}</td>
+      <td>${info.latest.dokumentasi ? `<a class="link-btn" href="${esc(info.latest.dokumentasi)}" target="_blank" rel="noopener">↗ Buka</a>` : '—'}</td>
+    </tr>
+  `).join('');
+}
+
+function renderKelolaDataView(){
+  renderKelolaTable(rows);
+}
+function renderKelolaTable(source){
+  const tbody = document.querySelector('#kelolaTable tbody');
+  const sorted = [...source].sort((a,b)=>(b._date?.getTime()||0)-(a._date?.getTime()||0));
+  if(!sorted.length){ tbody.innerHTML = '<tr><td colspan="7" class="empty-mini">Belum ada data.</td></tr>'; return; }
+  tbody.innerHTML = sorted.map(r=>`
+    <tr>
+      <td>${fmtDate(r._date)}</td>
+      <td>${esc(r.up3)||'—'}</td>
+      <td>${esc(r.ulp)||'—'}</td>
+      <td>${esc(r.perangkat)||'—'}</td>
+      <td>${esc(r.pekerjaan)||'—'}</td>
+      <td>${esc(r.lokasi)||'—'}</td>
+      <td>${esc(r.petugas)||'—'}</td>
+    </tr>
+  `).join('');
+}
+document.getElementById('kelolaSearch').addEventListener('input', (e)=>{
+  const q = e.target.value.trim().toLowerCase();
+  const source = q
+    ? rows.filter(r => [r.pekerjaan,r.petugas,r.lokasi,r.perangkat,r.up3,r.ulp].join(' ').toLowerCase().includes(q))
+    : rows;
+  renderKelolaTable(source);
+});
+document.getElementById('kelolaExportBtn').addEventListener('click', ()=>{
+  const csv = Papa.unparse(rows.map(r=>({
+    Tanggal: fmtDate(r._date), 'Unit UP3': r.up3||'', 'Unit ULP': r.ulp||'',
+    Perangkat: r.perangkat||'', Pekerjaan: r.pekerjaan||'', Lokasi: r.lokasi||'', Petugas: r.petugas||''
+  })));
+  downloadCsv(csv, 'kelola-data.csv');
+});
+function downloadCsv(csvText, filename){
+  const blob = new Blob([csvText], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function renderRekapView(){
+  const sel = document.getElementById('rekapBulan');
+  const months = Array.from(new Set(rows.filter(r=>r._date).map(r=>`${r._date.getFullYear()}-${r._date.getMonth()}`)))
+    .sort().reverse();
+  sel.innerHTML = '<option value="all">Semua periode</option>' + months.map(m=>{
+    const [y,mo] = m.split('-').map(Number);
+    return `<option value="${m}">${BULAN_ID[mo]} ${y}</option>`;
+  }).join('');
+  sel.onchange = renderRekapTable;
+  renderRekapTable();
+}
+function renderRekapTable(){
+  const sel = document.getElementById('rekapBulan').value || 'all';
+  const source = sel==='all' ? rows : rows.filter(r=>{
+    if(!r._date) return false;
+    const [y,mo] = sel.split('-').map(Number);
+    return r._date.getFullYear()===y && r._date.getMonth()===mo;
+  });
+  const counts = {};
+  source.forEach(r=>{ if(r.pekerjaan) counts[r.pekerjaan] = (counts[r.pekerjaan]||0)+1; });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const tbody = document.querySelector('#rekapTable tbody');
+  tbody.innerHTML = entries.length
+    ? entries.map(([cat,n])=>`<tr><td>${esc(cat)}</td><td>${n}</td></tr>`).join('')
+    : '<tr><td colspan="2" class="empty-mini">Tidak ada data pada periode ini.</td></tr>';
+}
+document.getElementById('rekapExportBtn').addEventListener('click', ()=>{
+  const rowsForExport = [...document.querySelectorAll('#rekapTable tbody tr')].map(tr=>{
+    const tds = tr.querySelectorAll('td');
+    return tds.length===2 ? { Kategori: tds[0].textContent, Jumlah: tds[1].textContent } : null;
+  }).filter(Boolean);
+  if(!rowsForExport.length) return;
+  downloadCsv(Papa.unparse(rowsForExport), 'rekap-laporan.csv');
+});
+
+/* =========================================================
+   HALAMAN (Profil / Kalender / FAQ)
+   ========================================================= */
+function loadProfile(){
+  try{ return JSON.parse(localStorage.getItem(STORAGE_PROFILE_KEY)) || { nama:'Admin', role:'K3 Supervisor' }; }
+  catch(e){ return { nama:'Admin', role:'K3 Supervisor' }; }
+}
+function applyProfileToSidebar(){
+  const p = loadProfile();
+  document.getElementById('profileName').textContent = p.nama || 'Admin';
+  document.getElementById('profileRole').textContent = p.role || 'K3 Supervisor';
+  document.getElementById('avatarInitial').textContent = (p.nama || 'A').trim().charAt(0).toUpperCase() || 'A';
+}
+function renderProfilView(){
+  const p = loadProfile();
+  document.getElementById('profilNama').value = p.nama || '';
+  document.getElementById('profilRole').value = p.role || '';
+}
+document.getElementById('profilForm').addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const data = {
+    nama: document.getElementById('profilNama').value.trim() || 'Admin',
+    role: document.getElementById('profilRole').value.trim() || 'K3 Supervisor'
+  };
+  localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(data));
+  applyProfileToSidebar();
+});
+
+function renderKalenderView(){ renderCalendar(); }
+function renderCalendar(){
+  const year = calCursor.getFullYear();
+  const month = calCursor.getMonth();
+  document.getElementById('calLabel').textContent = `${['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][month]} ${year}`;
+
+  const countByDay = {};
+  rows.forEach(r=>{
+    if(r._date && r._date.getFullYear()===year && r._date.getMonth()===month){
+      const d = r._date.getDate();
+      countByDay[d] = (countByDay[d]||0)+1;
+    }
+  });
+
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const today = new Date();
+
+  let cells = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'].map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<firstDow;i++) cells += '<div class="cal-day empty"></div>';
+  for(let d=1; d<=daysInMonth; d++){
+    const isToday = today.getFullYear()===year && today.getMonth()===month && today.getDate()===d;
+    cells += `<div class="cal-day${isToday?' today':''}" data-day="${d}">
+      <span class="dnum">${d}</span>
+      ${countByDay[d] ? `<span class="dcount">${countByDay[d]}</span>` : ''}
+    </div>`;
+  }
+  const grid = document.getElementById('calendarGrid');
+  grid.innerHTML = cells;
+  grid.querySelectorAll('.cal-day[data-day]').forEach(cell=>{
+    cell.addEventListener('click', ()=> showCalDayDetail(year, month, parseInt(cell.dataset.day,10)));
+  });
+}
+function showCalDayDetail(year, month, day){
+  const dayRows = rows.filter(r=> r._date && r._date.getFullYear()===year && r._date.getMonth()===month && r._date.getDate()===day);
+  document.getElementById('calDayTitle').textContent = `${day} ${['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][month]} ${year} · ${dayRows.length} pekerjaan`;
+  const el = document.getElementById('calDayList');
+  el.innerHTML = dayRows.length ? dayRows.map(r=>`
+    <div class="recent-item">
+      <div>
+        <div class="rname">${esc(r.pekerjaan)||'—'}</div>
+        <div class="rloc">${esc(r.lokasi || r.ulp || '—')} · ${esc(r.petugas)||'—'}</div>
+      </div>
+      <span class="badge" style="background:${colorFor(r.pekerjaan)}">${esc(r.pekerjaan)||'—'}</span>
+    </div>
+  `).join('') : '<div class="empty-mini">Tidak ada pekerjaan pada tanggal ini.</div>';
+}
+document.getElementById('calPrev').addEventListener('click', ()=>{
+  calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()-1, 1);
+  renderCalendar();
+});
+document.getElementById('calNext').addEventListener('click', ()=>{
+  calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()+1, 1);
+  renderCalendar();
+});
+
+const FAQ_ITEMS = [
+  { q:'Bagaimana cara memuat data ke dashboard?', a:'Buka ikon ⚙ (Sumber Data) di kanan atas, lalu pilih salah satu cara: unggah file spreadsheet, tempel URL CSV/Apps Script otomatis, atau tempel data CSV secara manual.' },
+  { q:'Apakah data diperbarui otomatis?', a:'Ya, jika kamu menggunakan opsi "Sumber otomatis (live)" dengan URL CSV, dashboard akan menyegarkan data setiap 5 menit secara otomatis, dan juga bisa disegarkan manual lewat tombol "Segarkan sekarang".' },
+  { q:'Ke mana data petugas dan profil disimpan?', a:'Data petugas dan profil admin disimpan langsung di browser (localStorage), bukan di spreadsheet. Artinya data ini khusus untuk perangkat/browser yang dipakai.' },
+  { q:'Bagaimana cara menambahkan koordinat di Peta Wilayah?', a:'Buka menu "Peta Wilayah", isi kolom Latitude dan Longitude pada baris lokasi yang sesuai, lalu data akan otomatis tersimpan di browser.' },
+  { q:'Kenapa grafik terlihat kosong?', a:'Grafik akan kosong jika belum ada data yang dimuat, atau data yang dimuat tidak memiliki kolom Timestamp/Nama Pekerjaan yang valid. Periksa kembali format kolom di sumber data.' }
+];
+function renderFaqView(){
+  const el = document.getElementById('faqList');
+  el.innerHTML = FAQ_ITEMS.map((f,i)=>`
+    <div class="faq-item" data-i="${i}">
+      <div class="faq-q">${esc(f.q)}<span>+</span></div>
+      <div class="faq-a">${esc(f.a)}</div>
+    </div>
+  `).join('');
+  el.querySelectorAll('.faq-item').forEach(item=>{
+    item.querySelector('.faq-q').addEventListener('click', ()=> item.classList.toggle('open'));
+  });
+}
+
+/* =========================================================
+   GRAFIK & METRIK (Pekerjaan per Unit / Akumulasi / Peta Wilayah)
+   ========================================================= */
+function renderMetrikUnitView(){
+  const counts = {};
+  rows.forEach(r=>{ if(r.ulp) counts[r.ulp] = (counts[r.ulp]||0)+1; });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+
+  if(unitChart) unitChart.destroy();
+  unitChart = new Chart(document.getElementById('unitChart'), {
+    type:'bar',
+    data:{ labels: entries.map(e=>e[0]), datasets:[{ label:'Total Pekerjaan', data: entries.map(e=>e[1]), backgroundColor:'#3fae8f' }] },
+    options:{
+      responsive:true,
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ grid:{ display:false }, ticks:{ color:'#93a6c4', font:{size:11} } },
+        y:{ grid:{ color:'#233a5e' }, ticks:{ color:'#93a6c4', precision:0 }, beginAtZero:true }
+      }
+    }
+  });
+
+  const tbody = document.querySelector('#unitTable tbody');
+  tbody.innerHTML = entries.length
+    ? entries.map(([u,n])=>`<tr><td>${esc(u)}</td><td>${n}</td></tr>`).join('')
+    : '<tr><td colspan="2" class="empty-mini">Belum ada data.</td></tr>';
+}
+
+function renderMetrikAkumulasiView(){
+  const sorted = [...rows].filter(r=>r._date).sort((a,b)=>a._date-b._date);
+  const labels = [];
+  const data = [];
+  let running = 0;
+  sorted.forEach(r=>{
+    running++;
+    labels.push(fmtDate(r._date));
+    data.push(running);
+  });
+  if(akumulasiChart) akumulasiChart.destroy();
+  akumulasiChart = new Chart(document.getElementById('akumulasiChart'), {
+    type:'line',
+    data:{ labels, datasets:[{ label:'Total Kumulatif', data, borderColor:'#5aa4f5', backgroundColor:'rgba(90,164,245,.15)', fill:true, tension:.25, pointRadius:0, borderWidth:2 }] },
+    options:{
+      responsive:true,
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ grid:{ display:false }, ticks:{ color:'#93a6c4', maxTicksLimit:8, font:{size:10} } },
+        y:{ grid:{ color:'#233a5e' }, ticks:{ color:'#93a6c4', precision:0 }, beginAtZero:true }
+      }
+    }
+  });
+}
+
+function loadWilayahCoords(){
+  try{ return JSON.parse(localStorage.getItem(STORAGE_WILAYAH_KEY)) || {}; }
+  catch(e){ return {}; }
+}
+function saveWilayahCoords(map){ localStorage.setItem(STORAGE_WILAYAH_KEY, JSON.stringify(map)); }
+
+function renderMetrikPetaView(){
+  const counts = {};
+  rows.forEach(r=>{
+    const key = r.ulp || r.lokasi;
+    if(key) counts[key] = (counts[key]||0)+1;
+  });
+  const coords = loadWilayahCoords();
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const tbody = document.querySelector('#petaTable tbody');
+  if(!entries.length){ tbody.innerHTML = '<tr><td colspan="5" class="empty-mini">Belum ada data wilayah.</td></tr>'; return; }
+  tbody.innerHTML = entries.map(([loc,n])=>{
+    const c = coords[loc] || {};
+    return `<tr data-loc="${esc(loc)}">
+      <td>${esc(loc)}</td>
+      <td>${n}</td>
+      <td><input type="text" class="lat-input" value="${esc(c.lat||'')}" placeholder="-3.99"></td>
+      <td><input type="text" class="lng-input" value="${esc(c.lng||'')}" placeholder="122.51"></td>
+      <td><span class="link-btn" data-save-loc="${esc(loc)}">Simpan</span></td>
+    </tr>`;
+  }).join('');
+  tbody.querySelectorAll('[data-save-loc]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const loc = btn.dataset.saveLoc;
+      const tr = btn.closest('tr');
+      const lat = tr.querySelector('.lat-input').value.trim();
+      const lng = tr.querySelector('.lng-input').value.trim();
+      const map = loadWilayahCoords();
+      map[loc] = { lat, lng };
+      saveWilayahCoords(map);
+      btn.textContent = 'Tersimpan ✓';
+      setTimeout(()=> btn.textContent = 'Simpan', 1200);
+    });
+  });
+}
+
 /* ---------------- boot ---------------- */
 (function init(){
   if(localStorage.getItem(STORAGE_THEME_KEY) === 'light') document.body.classList.add('theme-light');
+  applyProfileToSidebar();
 
   const hadCache = restoreRows();
   if(hadCache){ assignCategoryColors(); setStatus(`${rows.length} baris dimuat dari sesi sebelumnya.`, 'ok'); }
   renderAll();
 
-  if(CONFIG.SOURCE_URL){
-    // Mode otomatis: URL sudah ditanam di kode, langsung tarik data tanpa interaksi apa pun.
-    document.getElementById('csvUrlInput').value = CONFIG.SOURCE_URL;
+  // Prioritas 1: URL default yang di-hardcode langsung di kode (lihat DEFAULT_SOURCE_URL di atas)
+  if(DEFAULT_SOURCE_URL && DEFAULT_SOURCE_URL !== 'TEMPEL_LINK_ANDA_DI_SINI'){
+    localStorage.setItem(STORAGE_URL_KEY, DEFAULT_SOURCE_URL);
+    document.getElementById('csvUrlInput').value = DEFAULT_SOURCE_URL;
     document.getElementById('refreshBtn').style.display = 'inline-block';
-    setStatus('Mengambil data otomatis…');
+    setStatus('Mengambil data dari sumber…');
     refreshFromSavedSource(false);
     startAutoRefresh();
     return;
   }
 
+  // Prioritas 2: URL yang pernah disimpan manual sebelumnya (fallback)
   const savedUrl = localStorage.getItem(STORAGE_URL_KEY);
   if(savedUrl){
     document.getElementById('csvUrlInput').value = savedUrl;
