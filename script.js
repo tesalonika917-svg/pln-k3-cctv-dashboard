@@ -1,1951 +1,5696 @@
-```javascript
 /* =========================================================
-   LOGSHEET MONITORING CCTV ONLINE UID SSTB
+   PLN K3 · CCTV MONITORING DASHBOARD
+   LOG PEKERJAAN + DOKUMENTASI GAMBAR
    ========================================================= */
 
 
 /* =========================================================
-   URL GOOGLE SHEETS
-   =========================================================
+   KONSTANTA
+   ========================================================= */
 
-   GANTI BAGIAN INI DENGAN URL CSV SPREADSHEET KAMU.
+const HARI_ID = [
+  'Minggu',
+  'Senin',
+  'Selasa',
+  'Rabu',
+  'Kamis',
+  'Jumat',
+  'Sabtu'
+];
 
-   Contoh:
 
-   https://docs.google.com/spreadsheets/d/ID/gviz/tq?tqx=out:csv&gid=0
-========================================================= */
+const BULAN_ID = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'Mei',
+  'Jun',
+  'Jul',
+  'Agu',
+  'Sep',
+  'Okt',
+  'Nov',
+  'Des'
+];
 
-const SHEET_URL =
-    'https://docs.google.com/spreadsheets/d/e/2PACX-1vQWRM7E3rtMsJVWf9z1cntdblP4nSP9p0QCC6DeEbVt_3MHbjicUDgP2AsgLPV-NaNAYH3YZfDwFXhI/pub?output=csv';
 
+const STORAGE_ROWS_KEY =
+  'plnk3-dashboard-rows';
+
+
+const STORAGE_URL_KEY =
+  'plnk3-dashboard-source-url';
+
+
+const STORAGE_THEME_KEY =
+  'plnk3-dashboard-theme';
+
+
+const STORAGE_PETUGAS_KEY =
+  'plnk3-petugas-list';
+
+
+const STORAGE_PROFILE_KEY =
+  'plnk3-profile';
+
+
+const STORAGE_WILAYAH_KEY =
+  'plnk3-wilayah-coords';
+
+
+const CATEGORY_PALETTE = [
+  '#f0b93f',
+  '#e0704f',
+  '#8b7fd6',
+  '#3fae8f',
+  '#5aa4f5',
+  '#e3b98a'
+];
 
 
 /* =========================================================
-   GLOBAL DATA
-========================================================= */
+   SUMBER DATA DEFAULT
+   ========================================================= */
 
-let allRows = [];
-
-let normalizedRows = [];
-
-let currentKelolaRows = [];
-
-let currentDirektoriRows = [];
-
+const DEFAULT_SOURCE_URL =
+'https://docs.google.com/spreadsheets/d/e/2PACX-1vQWRM7E3rtMsJVWf9z1cntdblP4nSP9p0QCC6DeEbVt_3MHbjicUDgP2AsgLPV-NaNAYH3YZfDwFXhI/pub?output=csv';
 
 
 /* =========================================================
-   HEADER MAP
-========================================================= */
+   VARIABLE GLOBAL
+   ========================================================= */
+
+let rows = [];
+
+let categoryColor = {};
+
+let lineChart;
+let donutChart;
+let barChart;
+let petugasChart;
+let unitChart;
+let akumulasiChart;
+
+let autoRefreshTimer = null;
+
+let calCursor = new Date();
+
+
+/* =========================================================
+   HEADER NORMALIZATION
+   ========================================================= */
 
 const HEADER_MAP = {
 
-    'timestamp': 'timestamp',
-    'tanggal': 'timestamp',
-    'tanggal pekerjaan': 'timestamp',
-    'waktu': 'timestamp',
-    'date': 'timestamp',
+  'timestamp':
+    'timestamp',
 
-    'up3': 'up3',
-    'unit up3': 'up3',
+  'tanggal':
+    'timestamp',
 
-    'ulp': 'ulp',
-    'unit ulp': 'ulp',
+  'waktu':
+    'timestamp',
 
-    'perangkat': 'perangkat',
-    'nama perangkat': 'perangkat',
-    'cctv': 'perangkat',
-    'nama cctv': 'perangkat',
 
-    'pekerjaan': 'pekerjaan',
-    'jenis pekerjaan': 'pekerjaan',
-    'kegiatan': 'pekerjaan',
+  'unit up3':
+    'up3',
 
-    'lokasi': 'lokasi',
-    'alamat': 'lokasi',
+  'up3':
+    'up3',
 
-    'petugas': 'petugas',
-    'nama petugas': 'petugas',
-    'teknisi': 'petugas',
 
-    'dokumentasi cctv': 'dokumentasi',
-    'dokumentasi': 'dokumentasi',
-    'link': 'dokumentasi',
-    'foto': 'dokumentasi'
+  'unit ulp':
+    'ulp',
+
+  'ulp':
+    'ulp',
+
+
+  'nama perangkat cctv':
+    'perangkat',
+
+  'perangkat cctv':
+    'perangkat',
+
+  'nama perangkat':
+    'perangkat',
+
+
+  'nama pekerjaan':
+    'pekerjaan',
+
+  'pekerjaan':
+    'pekerjaan',
+
+
+  'lokasi pekerjaan':
+    'lokasi',
+
+  'lokasi':
+    'lokasi',
+
+
+  'petugas pelaksana di lapangan':
+    'petugas',
+
+  'petugas pelaksana':
+    'petugas',
+
+  'petugas':
+    'petugas',
+
+
+  'dokumentasi cctv':
+    'dokumentasi',
+
+  'dokumentasi':
+    'dokumentasi',
+
+  'link':
+    'dokumentasi',
+
+
+  'deskripsi':
+    'deskripsi',
+
+  'keterangan':
+    'deskripsi',
+
+  'description':
+    'deskripsi'
 
 };
 
 
-
 /* =========================================================
-   ESCAPE HTML
-========================================================= */
+   PARSE TIMESTAMP
+   ========================================================= */
 
-function esc(value) {
+function parseTimestamp(raw){
 
-    return String(value ?? '')
+  if(!raw)
+    return null;
 
-        .replace(/&/g, '&amp;')
 
-        .replace(/</g, '&lt;')
+  raw =
+    String(raw).trim();
 
-        .replace(/>/g, '&gt;')
 
-        .replace(/"/g, '&quot;')
+  /* DD/MM/YYYY HH:MM:SS */
 
-        .replace(/'/g, '&#039;');
+  let m =
+    raw.match(
+      /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/
+    );
+
+
+  if(m){
+
+    const [
+      ,
+      d,
+      mo,
+      y,
+      h,
+      mi,
+      s
+    ] = m;
+
+
+    return new Date(
+      +y,
+      +mo - 1,
+      +d,
+      +(h || 0),
+      +(mi || 0),
+      +(s || 0)
+    );
+
+  }
+
+
+  /* YYYY-MM-DD HH:MM:SS */
+
+  m =
+    raw.match(
+      /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/
+    );
+
+
+  if(m){
+
+    const [
+      ,
+      y,
+      mo,
+      d,
+      h,
+      mi,
+      s
+    ] = m;
+
+
+    return new Date(
+      +y,
+      +mo - 1,
+      +d,
+      +(h || 0),
+      +(mi || 0),
+      +(s || 0)
+    );
+
+  }
+
+
+  const d =
+    new Date(raw);
+
+
+  return isNaN(d)
+    ? null
+    : d;
 
 }
 
 
-
 /* =========================================================
-   NORMALIZE HEADER
-========================================================= */
+   FORMAT TANGGAL + JAM
+   ========================================================= */
 
-function normalizeHeader(value) {
+function fmtDate(
+  d,
+  rawTimestamp = null
+){
 
-    return String(value ?? '')
+  /*
+   * Timestamp asli diprioritaskan.
+   * Tujuannya agar jam tidak hilang ketika
+   * dijalankan di GitHub Pages.
+   */
 
-        .trim()
+  if(
+    rawTimestamp !== null &&
+    rawTimestamp !== undefined &&
+    String(rawTimestamp).trim() !== ''
+  ){
 
-        .toLowerCase()
-
-        .replace(/\s+/g, ' ');
-
-}
+    const raw =
+      String(rawTimestamp).trim();
 
 
+    /* DD/MM/YYYY HH:MM:SS */
 
-/* =========================================================
-   NORMALIZE DATA
-========================================================= */
+    let m =
+      raw.match(
+        /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/
+      );
 
-function normalizeRows(rows) {
 
-    if (!Array.isArray(rows)) {
-        return [];
+    if(m){
+
+      const dd =
+        String(m[1]).padStart(2,'0');
+
+      const mm =
+        String(m[2]).padStart(2,'0');
+
+      const yyyy =
+        m[3];
+
+      const hh =
+        String(m[4]).padStart(2,'0');
+
+      const mi =
+        String(m[5]).padStart(2,'0');
+
+      const ss =
+        String(m[6] || '00').padStart(2,'0');
+
+
+      return `${dd}/${mm}/${yyyy} ${hh}:${mi}:${ss}`;
+
     }
 
 
-    return rows.map(row => {
+    /* YYYY-MM-DD HH:MM:SS */
+
+    m =
+      raw.match(
+        /^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/
+      );
 
 
-        const result = {
+    if(m){
 
-            timestamp: '',
+      const yyyy =
+        m[1];
 
-            up3: '',
+      const mm =
+        String(m[2]).padStart(2,'0');
 
-            ulp: '',
+      const dd =
+        String(m[3]).padStart(2,'0');
 
-            perangkat: '',
+      const hh =
+        String(m[4]).padStart(2,'0');
 
-            pekerjaan: '',
+      const mi =
+        String(m[5]).padStart(2,'0');
 
-            lokasi: '',
-
-            petugas: '',
-
-            dokumentasi: ''
-
-        };
-
-
-        Object.keys(row || {})
-            .forEach(key => {
+      const ss =
+        String(m[6] || '00').padStart(2,'0');
 
 
-                const header =
-                    normalizeHeader(key);
+      return `${dd}/${mm}/${yyyy} ${hh}:${mi}:${ss}`;
+
+    }
 
 
-                const field =
-                    HEADER_MAP[header];
+    return raw;
+
+  }
 
 
-                if (field) {
+  if(
+    !d ||
+    isNaN(d.getTime())
+  ){
 
-                    result[field] =
-                        row[key] ?? '';
+    return '—';
 
-                }
-
-
-            });
-
-
-        result._date =
-            parseTimestamp(
-                result.timestamp
-            );
+  }
 
 
-        return result;
+  const tanggal =
+    String(d.getDate()).padStart(2,'0');
 
+  const bulan =
+    String(d.getMonth()+1).padStart(2,'0');
+
+  const tahun =
+    d.getFullYear();
+
+  const jam =
+    String(d.getHours()).padStart(2,'0');
+
+  const menit =
+    String(d.getMinutes()).padStart(2,'0');
+
+  const detik =
+    String(d.getSeconds()).padStart(2,'0');
+
+
+  return `${tanggal}/${bulan}/${tahun} ${jam}:${menit}:${detik}`;
+
+}
+
+
+/* =========================================================
+   CEK HARI
+   ========================================================= */
+
+function isSameDay(a,b){
+
+  return a &&
+         b &&
+         a.getFullYear() === b.getFullYear() &&
+         a.getMonth() === b.getMonth() &&
+         a.getDate() === b.getDate();
+
+}
+
+
+/* =========================================================
+   ESCAPE HTML
+   ========================================================= */
+
+function esc(s){
+
+  if(
+    s === undefined ||
+    s === null
+  )
+    return '';
+
+
+  return String(s).replace(
+    /[&<>"']/g,
+    c => ({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[c])
+  );
+
+}
+
+
+/* =========================================================
+   ID
+   ========================================================= */
+
+function uid(){
+
+  return 'id' +
+    Date.now().toString(36) +
+    Math.random()
+      .toString(36)
+      .slice(2,7);
+
+}
+
+
+/* =========================================================
+   NORMALIZE ROWS
+   ========================================================= */
+
+function normalizeRows(raw){
+
+  if(
+    !raw ||
+    !raw.length
+  )
+    return [];
+
+
+  const headerRow =
+    Object.keys(raw[0]);
+
+
+  const keyFor = {};
+
+
+  headerRow.forEach(h=>{
+
+    const clean =
+      String(h)
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g,' ');
+
+
+    keyFor[h] =
+      HEADER_MAP[clean] || null;
+
+  });
+
+
+  return raw
+    .map(r=>{
+
+      const o = {};
+
+
+      headerRow.forEach(h=>{
+
+        const k =
+          keyFor[h];
+
+
+        if(k){
+
+          o[k] =
+            (r[h] ?? '')
+              .toString()
+              .trim();
+
+        }
+
+      });
+
+
+      o._date =
+        parseTimestamp(
+          o.timestamp
+        );
+
+
+      return o;
+
+    })
+    .filter(o =>
+      o._date ||
+      o.pekerjaan ||
+      o.up3
+    );
+
+}
+
+
+/* =========================================================
+   FETCH DATA
+   ========================================================= */
+
+async function fetchAndParse(url){
+
+  const res =
+    await fetch(url);
+
+
+  if(!res.ok){
+
+    throw new Error(
+      'HTTP ' + res.status
+    );
+
+  }
+
+
+  const text =
+    await res.text();
+
+
+  const trimmed =
+    text.trim();
+
+
+  if(
+    trimmed.startsWith('[') ||
+    trimmed.startsWith('{')
+  ){
+
+    const json =
+      JSON.parse(trimmed);
+
+
+    return Array.isArray(json)
+      ? json
+      : (
+          json.data ||
+          json.rows ||
+          []
+        );
+
+  }
+
+
+  return Papa.parse(
+    text,
+    {
+      header:true,
+      skipEmptyLines:true
+    }
+  ).data;
+
+}
+
+
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+function setStatus(
+  msg,
+  type
+){
+
+  const el =
+    document.getElementById(
+      'statusMsg'
+    );
+
+
+  if(!el)
+    return;
+
+
+  el.textContent =
+    msg;
+
+
+  el.className =
+    'drawer-status ' +
+    (type || '');
+
+}
+
+
+/* =========================================================
+   INGEST
+   ========================================================= */
+
+function ingest(
+  rawRows,
+  label
+){
+
+  const norm =
+    normalizeRows(rawRows);
+
+
+  if(!norm.length){
+
+    setStatus(
+      'Tidak ada baris valid. Periksa header kolom (Timestamp, Unit UP3, Unit ULP, dst).',
+      'err'
+    );
+
+
+    return;
+
+  }
+
+
+  rows =
+    norm;
+
+
+  setStatus(
+    `Berhasil memuat ${rows.length} baris dari ${label}.`,
+    'ok'
+  );
+
+
+  persistRows();
+
+  assignCategoryColors();
+
+  renderAll();
+
+}
+
+
+/* =========================================================
+   LOCAL STORAGE DATA
+   ========================================================= */
+
+function persistRows(){
+
+  try{
+
+    localStorage.setItem(
+      STORAGE_ROWS_KEY,
+      JSON.stringify(
+        rows.map(r=>({
+
+          ...r,
+
+          _date:
+            r._date
+              ? r._date.toISOString()
+              : null
+
+        }))
+      )
+    );
+
+  }catch(e){}
+
+}
+
+
+function restoreRows(){
+
+  try{
+
+    const raw =
+      localStorage.getItem(
+        STORAGE_ROWS_KEY
+      );
+
+
+    if(!raw)
+      return false;
+
+
+    const parsed =
+      JSON.parse(raw);
+
+
+    rows =
+      parsed.map(r=>({
+
+        ...r,
+
+        _date:
+          r._date
+            ? new Date(r._date)
+            : null
+
+      }));
+
+
+    return rows.length > 0;
+
+  }catch(e){
+
+    return false;
+
+  }
+
+}
+
+
+/* =========================================================
+   CATEGORY COLORS
+   ========================================================= */
+
+function assignCategoryColors(){
+
+  const counts = {};
+
+
+  rows.forEach(r=>{
+
+    if(r.pekerjaan){
+
+      counts[r.pekerjaan] =
+        (counts[r.pekerjaan] || 0) + 1;
+
+    }
+
+  });
+
+
+  const top =
+    Object.keys(counts)
+      .sort(
+        (a,b)=>
+          counts[b] - counts[a]
+      )
+      .slice(
+        0,
+        CATEGORY_PALETTE.length
+      );
+
+
+  categoryColor = {};
+
+
+  top.forEach((cat,i)=>{
+
+    categoryColor[cat] =
+      CATEGORY_PALETTE[i];
+
+  });
+
+}
+
+
+function colorFor(cat){
+
+  return categoryColor[cat] ||
+    '#5d7196';
+
+}
+
+
+/* =========================================================
+   GOOGLE DRIVE / DOKUMENTASI
+   ========================================================= */
+
+function getDriveFileId(url){
+
+  if(!url)
+    return null;
+
+
+  const text =
+    String(url).trim();
+
+
+  /*
+   * Format:
+   * drive.google.com/file/d/FILE_ID/view
+   */
+
+  let match =
+    text.match(
+      /\/file\/d\/([a-zA-Z0-9_-]+)/
+    );
+
+
+  if(match)
+    return match[1];
+
+
+  /*
+   * Format:
+   * drive.google.com/open?id=FILE_ID
+   */
+
+  match =
+    text.match(
+      /[?&]id=([a-zA-Z0-9_-]+)/
+    );
+
+
+  if(match)
+    return match[1];
+
+
+  /*
+   * Format:
+   * drive.google.com/uc?id=FILE_ID
+   */
+
+  match =
+    text.match(
+      /\/uc\?.*id=([a-zA-Z0-9_-]+)/
+    );
+
+
+  if(match)
+    return match[1];
+
+
+  return null;
+
+}
+
+
+/* =========================================================
+   UBAH LINK DOKUMENTASI MENJADI URL GAMBAR
+   ========================================================= */
+
+function getImageUrl(url){
+
+  if(!url)
+    return null;
+
+
+  const raw =
+    String(url).trim();
+
+
+  if(!raw)
+    return null;
+
+
+  const driveId =
+    getDriveFileId(raw);
+
+
+  /*
+   * Jika Google Drive
+   */
+
+  if(driveId){
+
+    return `https://drive.google.com/thumbnail?id=${encodeURIComponent(driveId)}&sz=w1000`;
+
+  }
+
+
+  /*
+   * Jika URL langsung gambar
+   */
+
+  if(
+    /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?.*)?$/i
+      .test(raw)
+  ){
+
+    return raw;
+
+  }
+
+
+  /*
+   * Beberapa URL Googleusercontent
+   * dapat langsung digunakan.
+   */
+
+  if(
+    raw.includes('googleusercontent.com')
+  ){
+
+    return raw;
+
+  }
+
+
+  return null;
+
+}
+
+
+/* =========================================================
+   BUKA MODAL GAMBAR
+   ========================================================= */
+
+function openImageModal(
+  imageUrl,
+  caption
+){
+
+  const modal =
+    document.getElementById(
+      'imageModal'
+    );
+
+
+  const image =
+    document.getElementById(
+      'imageModalImg'
+    );
+
+
+  const captionEl =
+    document.getElementById(
+      'imageModalCaption'
+    );
+
+
+  if(!modal || !image)
+    return;
+
+
+  image.src =
+    imageUrl;
+
+
+  captionEl.textContent =
+    caption || 'Dokumentasi CCTV';
+
+
+  modal.classList.add('open');
+
+}
+
+
+/* =========================================================
+   TUTUP MODAL
+   ========================================================= */
+
+function closeImageModal(){
+
+  const modal =
+    document.getElementById(
+      'imageModal'
+    );
+
+
+  const image =
+    document.getElementById(
+      'imageModalImg'
+    );
+
+
+  if(modal){
+
+    modal.classList.remove(
+      'open'
+    );
+
+  }
+
+
+  if(image){
+
+    image.src = '';
+
+  }
+
+}
+
+
+/* =========================================================
+   DOKUMENTASI HTML
+   ========================================================= */
+
+function documentationHtml(
+  url,
+  caption
+){
+
+  if(!url){
+
+    return `
+      <div class="documentation-fallback">
+        Tidak ada dokumentasi
+      </div>
+    `;
+
+  }
+
+
+  const safeUrl =
+    esc(url);
+
+
+  const imageUrl =
+    getImageUrl(url);
+
+
+  /*
+   * Jika dapat dibuat menjadi URL gambar
+   */
+
+  if(imageUrl){
+
+    const safeImageUrl =
+      esc(imageUrl);
+
+
+    return `
+
+      <div class="documentation-cell">
+
+        <img
+          class="documentation-image"
+          src="${safeImageUrl}"
+          alt="Dokumentasi CCTV"
+          loading="lazy"
+          data-image-url="${safeImageUrl}"
+          data-caption="${esc(caption || 'Dokumentasi CCTV')}">
+
+        <a
+          class="documentation-link"
+          href="${safeUrl}"
+          target="_blank"
+          rel="noopener">
+
+          ↗ Buka
+
+        </a>
+
+      </div>
+
+    `;
+
+  }
+
+
+  /*
+   * Jika bukan URL gambar
+   */
+
+  return `
+
+    <div class="documentation-cell">
+
+      <div class="documentation-fallback">
+
+        📎 Dokumentasi
+
+      </div>
+
+
+      <a
+        class="documentation-link"
+        href="${safeUrl}"
+        target="_blank"
+        rel="noopener">
+
+        ↗ Buka Dokumentasi
+
+      </a>
+
+    </div>
+
+  `;
+
+}
+
+
+/* =========================================================
+   AKTIFKAN EVENT GAMBAR
+   ========================================================= */
+
+function bindDocumentationImages(){
+
+  document
+    .querySelectorAll(
+      '.documentation-image'
+    )
+    .forEach(img=>{
+
+      img.addEventListener(
+        'click',
+        ()=>{
+
+          openImageModal(
+            img.dataset.imageUrl,
+            img.dataset.caption
+          );
+
+        }
+      );
+
+
+      /*
+       * Jika gambar gagal dimuat,
+       * ubah menjadi fallback.
+       */
+
+      img.addEventListener(
+        'error',
+        ()=>{
+
+          const parent =
+            img.parentElement;
+
+
+          if(!parent)
+            return;
+
+
+          const originalUrl =
+            parent
+              .querySelector(
+                '.documentation-link'
+              )
+              ?.href || '#';
+
+
+          parent.innerHTML = `
+
+            <div class="documentation-fallback">
+
+              📎 Gambar tidak dapat ditampilkan
+
+            </div>
+
+
+            <a
+              class="documentation-link"
+              href="${esc(originalUrl)}"
+              target="_blank"
+              rel="noopener">
+
+              ↗ Buka Dokumentasi
+
+            </a>
+
+          `;
+
+        }
+      );
 
     });
 
 }
 
 
-
 /* =========================================================
-   PARSE TIMESTAMP
-========================================================= */
+   CAMERA
+   ========================================================= */
 
-function parseTimestamp(value) {
+function renderCameraRow(){
 
-    if (!value) {
-        return null;
-    }
-
-
-    if (value instanceof Date) {
-        return value;
-    }
-
-
-    const text =
-        String(value).trim();
-
-
-    if (!text) {
-        return null;
-    }
-
-
-    let date =
-        new Date(text);
-
-
-    if (!isNaN(date.getTime())) {
-        return date;
-    }
-
-
-    /*
-       DD/MM/YYYY HH:mm:ss
-    */
-
-    const match =
-        text.match(
-            /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
-        );
-
-
-    if (match) {
-
-
-        const day =
-            Number(match[1]);
-
-
-        const month =
-            Number(match[2]) - 1;
-
-
-        const year =
-            Number(match[3]);
-
-
-        const hour =
-            Number(match[4] || 0);
-
-
-        const minute =
-            Number(match[5] || 0);
-
-
-        const second =
-            Number(match[6] || 0);
-
-
-        return new Date(
-            year,
-            month,
-            day,
-            hour,
-            minute,
-            second
-        );
-
-    }
-
-
-    return null;
-
-}
-
-
-
-/* =========================================================
-   FORMAT TANGGAL + JAM
-========================================================= */
-
-function fmtDate(row) {
-
-
-    const raw =
-        row?.timestamp ?? '';
-
-
-    const date =
-        row?._date ||
-        parseTimestamp(raw);
-
-
-    if (!date) {
-        return raw;
-    }
-
-
-    const tanggal =
-        String(
-            date.getDate()
-        ).padStart(2, '0');
-
-
-    const bulan =
-        String(
-            date.getMonth() + 1
-        ).padStart(2, '0');
-
-
-    const tahun =
-        date.getFullYear();
-
-
-    const jam =
-        String(
-            date.getHours()
-        ).padStart(2, '0');
-
-
-    const menit =
-        String(
-            date.getMinutes()
-        ).padStart(2, '0');
-
-
-    const detik =
-        String(
-            date.getSeconds()
-        ).padStart(2, '0');
-
-
-    return (
-        `${tanggal}/${bulan}/${tahun} ` +
-        `${jam}:${menit}:${detik}`
+  const el =
+    document.getElementById(
+      'cameraRow'
     );
 
-}
+
+  if(!rows.length){
+
+    el.innerHTML =
+      '<div class="camera-placeholder">Belum ada data perangkat CCTV. Klik ikon ⚙ di kanan atas untuk memuat data.</div>';
+
+    return;
+
+  }
 
 
-
-/* =========================================================
-   GOOGLE DRIVE FILE ID
-========================================================= */
-
-function getDriveFileId(url) {
+  const latestByDevice = {};
 
 
-    if (!url) {
-        return null;
-    }
+  rows.forEach(r=>{
+
+    if(!r.perangkat)
+      return;
 
 
-    const value =
-        String(url).trim();
+    const existing =
+      latestByDevice[
+        r.perangkat
+      ];
 
 
-    try {
+    if(
+      !existing ||
+      (
+        r._date &&
+        existing._date &&
+        r._date >
+          existing._date
+      )
+    ){
 
-
-        const u =
-            new URL(value);
-
-
-        /*
-           FORMAT:
-
-           drive.google.com/file/d/FILE_ID/view
-        */
-
-        let match =
-            u.pathname.match(
-                /\/file\/d\/([a-zA-Z0-9_-]+)/
-            );
-
-
-        if (match) {
-
-            return match[1];
-
-        }
-
-
-        /*
-           FORMAT:
-
-           drive.google.com/open?id=FILE_ID
-        */
-
-        const id =
-            u.searchParams.get('id');
-
-
-        if (id) {
-
-            return id;
-
-        }
-
-
-        /*
-           FORMAT:
-
-           /d/FILE_ID
-        */
-
-        match =
-            u.pathname.match(
-                /\/d\/([a-zA-Z0-9_-]+)/
-            );
-
-
-        if (match) {
-
-            return match[1];
-
-        }
-
-
-    } catch (error) {
-
-        console.warn(
-            'URL dokumentasi tidak valid:',
-            url
-        );
+      latestByDevice[
+        r.perangkat
+      ] = r;
 
     }
 
-
-    const fallback =
-        value.match(
-            /(?:\/d\/|id=)([a-zA-Z0-9_-]+)/
-        );
+  });
 
 
-    return fallback
-        ? fallback[1]
-        : null;
-
-}
-
-
-
-/* =========================================================
-   GOOGLE DRIVE IMAGE URL
-========================================================= */
-
-function getDocumentationImageUrl(url) {
+  const devices =
+    Object.values(
+      latestByDevice
+    )
+    .sort(
+      (a,b)=>
+        (b._date?.getTime() || 0) -
+        (a._date?.getTime() || 0)
+    )
+    .slice(0,4);
 
 
-    const driveId =
-        getDriveFileId(url);
+  el.innerHTML =
+    devices.map(d=>`
 
+      <div class="cam-card">
 
-    if (driveId) {
+        <div class="cam-feed"></div>
 
+        <div class="cam-tag">
 
-        return (
-            'https://drive.google.com/thumbnail' +
-            '?id=' +
-            encodeURIComponent(driveId) +
-            '&sz=w800'
-        );
+          <span class="rec"></span>
 
-
-    }
-
-
-    /*
-       Jika URL merupakan URL gambar
-       secara langsung.
-    */
-
-    return String(
-        url || ''
-    ).trim();
-
-}
-
-
-
-/* =========================================================
-   DOKUMENTASI CELL
-========================================================= */
-
-function renderDocumentationCell(url) {
-
-
-    if (!url) {
-
-
-        return `
-            <span class="muted">
-                Tidak ada
-            </span>
-        `;
-
-
-    }
-
-
-    const safeUrl =
-        esc(url);
-
-
-    const imageUrl =
-        esc(
-            getDocumentationImageUrl(url)
-        );
-
-
-    return `
-
-        <div class="doc-cell">
-
-
-            <a
-                href="${safeUrl}"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="doc-image-link"
-                title="Klik untuk membuka dokumentasi"
-            >
-
-
-                <img
-                    src="${imageUrl}"
-                    alt="Dokumentasi pekerjaan"
-                    class="doc-thumb"
-                    loading="lazy"
-
-                    onerror="
-                        this.style.display='none';
-
-                        const fallback =
-                            this.parentElement
-                                .nextElementSibling;
-
-                        if (fallback) {
-                            fallback.style.display =
-                                'inline-flex';
-                        }
-                    "
-                >
-
-
-            </a>
-
-
-            <a
-                href="${safeUrl}"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="link-btn doc-fallback"
-                style="display:none;"
-            >
-
-                ↗ Buka
-
-            </a>
-
+          ${
+            d._date &&
+            isSameDay(
+              d._date,
+              new Date()
+            )
+              ? 'AKTIF'
+              : 'TERAKHIR'
+          }
 
         </div>
 
-    `;
+
+        ${
+          d.dokumentasi
+
+            ? `<a
+                class="cam-open"
+                href="${esc(d.dokumentasi)}"
+                target="_blank"
+                rel="noopener">
+
+                ↗ Dokumentasi
+
+              </a>`
+
+            : ''
+        }
+
+
+        <div class="cam-info">
+
+          <div class="name">
+
+            ${esc(d.perangkat)}
+
+          </div>
+
+
+          <div class="loc">
+
+            ${esc(
+              d.ulp ||
+              d.lokasi ||
+              '—'
+            )}
+
+          </div>
+
+        </div>
+
+      </div>
+
+    `).join('');
 
 }
 
 
-
 /* =========================================================
-   LOAD GOOGLE SPREADSHEET
-========================================================= */
+   LINE CHART
+   ========================================================= */
 
-function loadSpreadsheet() {
+function renderLineChart(){
 
-
-    if (
-        !SHEET_URL ||
-        SHEET_URL.includes(
-            'MASUKKAN_URL'
-        )
-    ) {
-
-
-        setConnectionStatus(
-            false,
-            'URL Spreadsheet belum diatur'
-        );
-
-
-        return;
-
-    }
-
-
-    setConnectionStatus(
-        true,
-        'Memuat data...'
+  const cats =
+    Object.keys(
+      categoryColor
     );
 
 
-    Papa.parse(
-        SHEET_URL,
-        {
+  const now =
+    new Date();
 
 
-            download: true,
+  const year =
+    now.getFullYear();
 
 
-            header: true,
+  document
+    .getElementById(
+      'lineSub'
+    )
+    .textContent =
+      String(year);
 
 
-            skipEmptyLines: true,
+  const datasets =
+    cats.map(cat=>{
+
+      const monthly =
+        new Array(12).fill(0);
 
 
-            complete: function(results) {
+      rows.forEach(r=>{
+
+        if(
+          r.pekerjaan === cat &&
+          r._date &&
+          r._date.getFullYear() === year
+        ){
+
+          monthly[
+            r._date.getMonth()
+          ]++;
+
+        }
+
+      });
 
 
-                console.log(
-                    'DATA SPREADSHEET:',
-                    results.data
-                );
+      return {
+
+        label: cat,
+
+        data: monthly,
+
+        borderColor:
+          colorFor(cat),
+
+        backgroundColor:
+          colorFor(cat),
+
+        tension: 0.35,
+
+        pointRadius: 3,
+
+        pointBackgroundColor:
+          '#101f38',
+
+        pointBorderColor:
+          colorFor(cat),
+
+        pointBorderWidth: 2,
+
+        borderWidth: 2,
+
+        fill: false
+
+      };
+
+    });
 
 
-                allRows =
-                    Array.isArray(
-                        results.data
-                    )
-                        ? results.data
-                        : [];
+  if(lineChart)
+    lineChart.destroy();
 
 
-                /*
-                   SEMUA DATA DARI SPREADSHEET
-                   DISIMPAN.
+  lineChart =
+    new Chart(
+      document.getElementById(
+        'lineChart'
+      ),
+      {
 
-                   TIDAK ADA FILTER
-                   DOKUMENTASI.
-                */
+        type: 'line',
 
-                normalizedRows =
-                    normalizeRows(
-                        allRows
-                    );
+        data: {
 
+          labels:
+            BULAN_ID,
 
-                /*
-                   SEMUA DATA MASUK
-                   KE LOG PEKERJAAN.
-                */
+          datasets
 
-                currentKelolaRows =
-                    [
-                        ...normalizedRows
-                    ];
+        },
 
+        options: {
 
-                currentDirektoriRows =
-                    [
-                        ...normalizedRows
-                    ];
+          responsive: true,
 
+          plugins: {
 
-                updateDashboard();
+            legend: {
 
+              display: true,
 
-                renderKelolaTable(
-                    currentKelolaRows
-                );
+              position: 'right',
 
+              labels: {
 
-                updateJumlahPekerja(
-                    currentKelolaRows
-                );
+                color:
+                  '#93a6c4',
 
+                boxWidth: 9,
 
-                renderDirektoriView(
-                    currentDirektoriRows
-                );
+                boxHeight: 9,
 
+                font: {
+                  size: 11
+                }
 
-                setConnectionStatus(
-                    true,
-                    `${normalizedRows.length} data`
-                );
+              }
 
+            }
+
+          },
+
+          scales: {
+
+            x: {
+
+              grid: {
+                color: '#233a5e'
+              },
+
+              ticks: {
+                color: '#93a6c4',
+                font: {
+                  size: 11
+                }
+              }
 
             },
 
+            y: {
 
-            error: function(error) {
+              grid: {
+                color: '#233a5e'
+              },
 
+              ticks: {
 
-                console.error(
-                    'Gagal membaca Spreadsheet:',
-                    error
-                );
+                color:
+                  '#93a6c4',
 
+                font: {
+                  size: 11
+                },
 
-                setConnectionStatus(
-                    false,
-                    'Gagal memuat data'
-                );
+                precision: 0
 
+              },
+
+              beginAtZero: true
 
             }
 
+          }
 
         }
+
+      }
     );
 
 }
 
 
-
 /* =========================================================
-   STATUS KONEKSI
-========================================================= */
+   DONUT
+   ========================================================= */
 
-function setConnectionStatus(
-    connected,
-    text
-) {
+function renderDonutChart(){
 
-
-    const dot =
-        document.getElementById(
-            'connectionDot'
-        );
+  const counts = {};
 
 
-    const label =
-        document.getElementById(
-            'connectionText'
-        );
+  rows.forEach(r=>{
 
+    if(r.up3){
 
-    if (label) {
-
-        label.textContent =
-            text;
+      counts[r.up3] =
+        (counts[r.up3] || 0) + 1;
 
     }
 
-
-    if (dot) {
-
-        dot.classList.toggle(
-            'online',
-            connected
-        );
-
-    }
-
-}
+  });
 
 
+  let entries =
+    Object.entries(counts)
+      .sort(
+        (a,b)=>
+          b[1] - a[1]
+      );
 
-/* =========================================================
-   UPDATE DASHBOARD
-========================================================= */
 
-function updateDashboard() {
+  if(entries.length > 5){
 
-
-    const totalData =
-        document.getElementById(
-            'totalData'
+    const rest =
+      entries
+        .slice(4)
+        .reduce(
+          (s,e)=>
+            s + e[1],
+          0
         );
 
 
-    const totalCCTV =
-        document.getElementById(
-            'totalCCTV'
-        );
+    entries =
+      entries
+        .slice(0,4)
+        .concat([
+          ['Lainnya',rest]
+        ]);
 
+  }
 
-    const totalPekerjaan =
-        document.getElementById(
-            'totalPekerjaan'
-        );
 
+  const labels =
+    entries.map(e=>e[0]);
 
-    const lastUpdate =
-        document.getElementById(
-            'lastUpdate'
-        );
 
+  const data =
+    entries.map(e=>e[1]);
 
-    if (totalData) {
 
-        totalData.textContent =
-            normalizedRows.length;
-
-    }
-
-
-    const cctvSet =
-        new Set();
-
-
-    normalizedRows.forEach(
-        row => {
-
-
-            if (row.perangkat) {
-
-                cctvSet.add(
-                    String(
-                        row.perangkat
-                    ).trim()
-                );
-
-            }
-
-
-        }
-    );
-
-
-    if (totalCCTV) {
-
-        totalCCTV.textContent =
-            cctvSet.size;
-
-    }
-
-
-    const pekerjaanSet =
-        new Set();
-
-
-    normalizedRows.forEach(
-        row => {
-
-
-            if (row.pekerjaan) {
-
-                pekerjaanSet.add(
-                    String(
-                        row.pekerjaan
-                    ).trim()
-                );
-
-            }
-
-
-        }
-    );
-
-
-    if (totalPekerjaan) {
-
-        totalPekerjaan.textContent =
-            pekerjaanSet.size;
-
-    }
-
-
-    if (
-        lastUpdate &&
-        normalizedRows.length
-    ) {
-
-
-        const sorted =
-            [
-                ...normalizedRows
-            ].sort(
-                (a, b) => {
-
-
-                    const da =
-                        a._date
-                            ? a._date.getTime()
-                            : 0;
-
-
-                    const db =
-                        b._date
-                            ? b._date.getTime()
-                            : 0;
-
-
-                    return db - da;
-
-                }
-            );
-
-
-        lastUpdate.textContent =
-            fmtDate(
-                sorted[0]
-            );
-
-
-    }
-
-
-    renderDashboardTable();
-
-    updateRekap();
-
-}
-
-
-
-/* =========================================================
-   DASHBOARD TABLE
-========================================================= */
-
-function renderDashboardTable() {
-
-
-    const tbody =
-        document.querySelector(
-            '#dashboardTable tbody'
-        );
-
-
-    if (!tbody) {
-        return;
-    }
-
-
-    const rows =
-        [
-            ...normalizedRows
+  const colors =
+    labels.map(
+      (_,i)=>
+        CATEGORY_PALETTE[
+          i % CATEGORY_PALETTE.length
         ]
-        .sort(
-            (a, b) => {
+    );
 
 
-                const da =
-                    a._date
-                        ? a._date.getTime()
-                        : 0;
+  if(donutChart)
+    donutChart.destroy();
 
 
-                const db =
-                    b._date
-                        ? b._date.getTime()
-                        : 0;
+  donutChart =
+    new Chart(
+      document.getElementById(
+        'donutChart'
+      ),
+      {
+
+        type: 'doughnut',
+
+        data: {
+
+          labels,
+
+          datasets: [{
+
+            data,
+
+            backgroundColor:
+              colors,
+
+            borderColor:
+              '#132542',
+
+            borderWidth: 3
+
+          }]
+
+        },
+
+        options: {
+
+          responsive: true,
+
+          cutout: '68%',
+
+          plugins: {
+
+            legend: {
+              display: false
+            }
+
+          }
+
+        }
+
+      }
+    );
 
 
-                return db - da;
+  document
+    .getElementById(
+      'donutLegend'
+    )
+    .innerHTML =
+      labels.map((l,i)=>`
+
+        <div class="legend-row">
+
+          <span
+            class="legend-dot"
+            style="background:${colors[i]}">
+          </span>
+
+          ${esc(l)}
+
+          <b>${data[i]}</b>
+
+        </div>
+
+      `).join('');
+
+}
+
+
+/* =========================================================
+   BAR CHART
+   ========================================================= */
+
+function renderBarChart(){
+
+  const ulpCounts = {};
+
+
+  rows.forEach(r=>{
+
+    if(r.ulp){
+
+      ulpCounts[r.ulp] =
+        (ulpCounts[r.ulp] || 0) + 1;
+
+    }
+
+  });
+
+
+  const topUlp =
+    Object.keys(ulpCounts)
+      .sort(
+        (a,b)=>
+          ulpCounts[b] -
+          ulpCounts[a]
+      )
+      .slice(0,7);
+
+
+  const cats =
+    Object.keys(
+      categoryColor
+    );
+
+
+  const datasets =
+    cats.map(cat=>({
+
+      label: cat,
+
+      data:
+        topUlp.map(
+          ulp =>
+            rows.filter(
+              r =>
+                r.ulp === ulp &&
+                r.pekerjaan === cat
+            ).length
+        ),
+
+      backgroundColor:
+        colorFor(cat),
+
+      stack: 'stack1'
+
+    }));
+
+
+  if(barChart)
+    barChart.destroy();
+
+
+  barChart =
+    new Chart(
+      document.getElementById(
+        'barChart'
+      ),
+      {
+
+        type: 'bar',
+
+        data: {
+
+          labels: topUlp,
+
+          datasets
+
+        },
+
+        options: {
+
+          responsive: true,
+
+          plugins: {
+
+            legend: {
+
+              display: true,
+
+              position: 'bottom',
+
+              labels: {
+
+                color:
+                  '#93a6c4',
+
+                boxWidth: 9,
+
+                boxHeight: 9,
+
+                font: {
+                  size: 11
+                }
+
+              }
 
             }
+
+          },
+
+          scales: {
+
+            x: {
+
+              stacked: true,
+
+              grid: {
+                display: false
+              },
+
+              ticks: {
+
+                color:
+                  '#93a6c4',
+
+                font: {
+                  size: 11
+                }
+
+              }
+
+            },
+
+            y: {
+
+              stacked: true,
+
+              grid: {
+
+                color:
+                  '#233a5e'
+
+              },
+
+              ticks: {
+
+                color:
+                  '#93a6c4',
+
+                font: {
+                  size: 11
+                },
+
+                precision: 0
+
+              },
+
+              beginAtZero: true
+
+            }
+
+          }
+
+        }
+
+      }
+    );
+
+}
+
+
+/* =========================================================
+   RECENT ACTIVITY
+   ========================================================= */
+
+function renderRecentList(){
+
+  const el =
+    document.getElementById(
+      'recentList'
+    );
+
+
+  const sorted =
+    [...rows]
+      .sort(
+        (a,b)=>
+          (b._date?.getTime() || 0) -
+          (a._date?.getTime() || 0)
+      )
+      .slice(0,6);
+
+
+  if(!sorted.length){
+
+    el.innerHTML =
+      '<div class="empty-mini">Belum ada data.</div>';
+
+    return;
+
+  }
+
+
+  el.innerHTML =
+    sorted.map(r=>`
+
+      <div class="recent-item">
+
+        <div>
+
+          <div class="rname">
+
+            ${esc(r.pekerjaan) || '—'}
+
+          </div>
+
+
+          <div class="rloc">
+
+            ${esc(
+              r.lokasi ||
+              r.ulp ||
+              '—'
+            )}
+
+          </div>
+
+        </div>
+
+
+        <div class="recent-right">
+
+          <span class="rdate">
+
+            ${fmtDate(
+              r._date,
+              r.timestamp
+            )}
+
+          </span>
+
+
+          <span
+            class="badge"
+            style="background:${colorFor(r.pekerjaan)}">
+
+            ${esc(r.pekerjaan) || '—'}
+
+          </span>
+
+        </div>
+
+      </div>
+
+    `).join('');
+
+}
+
+
+/* =========================================================
+   SUMMARY
+   ========================================================= */
+
+function renderSummary(){
+
+  const today =
+    new Date();
+
+
+  const todays =
+    rows.filter(
+      r =>
+        isSameDay(
+          r._date,
+          today
         )
-        .slice(0, 10);
-
-
-    if (!rows.length) {
-
-
-        tbody.innerHTML = `
-
-            <tr>
-
-                <td
-                    colspan="6"
-                    class="empty-cell">
-
-                    Tidak ada data.
-
-                </td>
-
-            </tr>
-
-        `;
-
-
-        return;
-
-    }
-
-
-    tbody.innerHTML =
-        rows.map(
-            row => `
-
-                <tr>
-
-                    <td>
-                        ${esc(fmtDate(row))}
-                    </td>
-
-                    <td>
-                        ${esc(row.up3 || '')}
-                    </td>
-
-                    <td>
-                        ${esc(row.ulp || '')}
-                    </td>
-
-                    <td>
-                        ${esc(row.perangkat || '')}
-                    </td>
-
-                    <td>
-                        ${esc(row.pekerjaan || '')}
-                    </td>
-
-                    <td>
-                        ${esc(row.petugas || '')}
-                    </td>
-
-                </tr>
-
-            `
-        ).join('');
-
-}
-
-
-
-/* =========================================================
-   LOG PEKERJAAN VIEW
-========================================================= */
-
-function renderKelolaDataView() {
-
-
-    /*
-       SEMUA DATA.
-
-       TIDAK BOLEH:
-
-       filter(r => r.dokumentasi)
-    */
-
-    currentKelolaRows =
-        [
-            ...normalizedRows
-        ];
-
-
-    renderKelolaTable(
-        currentKelolaRows
     );
 
 
-    updateJumlahPekerja(
-        currentKelolaRows
-    );
+  document
+    .getElementById(
+      'welcomeMsg'
+    )
+    .textContent =
+
+      rows.length
+
+        ? `${HARI_ID[today.getDay()]}, ${fmtDate(today)} · ${rows.length} total pekerjaan tercatat, ${todays.length} hari ini.`
+
+        : 'Selamat datang. Belum ada data — buka panel Sumber Data (⚙) untuk mulai.';
+
+
+  document
+    .getElementById(
+      'notifDot'
+    )
+    .style.display =
+      todays.length
+        ? 'block'
+        : 'none';
 
 }
 
 
-
 /* =========================================================
-   LOG PEKERJAAN TABLE
-========================================================= */
+   RENDER ALL
+   ========================================================= */
 
-function renderKelolaTable(rows) {
+function renderAll(){
 
+  renderSummary();
 
-    const tbody =
-        document.querySelector(
-            '#kelolaTable tbody'
-        );
+  renderCameraRow();
 
+  renderLineChart();
 
-    if (!tbody) {
-        return;
-    }
+  renderDonutChart();
 
+  renderBarChart();
 
-    if (
-        !Array.isArray(rows) ||
-        rows.length === 0
-    ) {
+  renderRecentList();
 
-
-        tbody.innerHTML = `
-
-            <tr>
-
-                <td
-                    colspan="8"
-                    class="empty-cell">
-
-                    Tidak ada data.
-
-                </td>
-
-            </tr>
-
-        `;
-
-
-        return;
-
-    }
-
-
-    tbody.innerHTML =
-        rows.map(
-            row => `
-
-                <tr>
-
-                    <td>
-                        ${esc(fmtDate(row))}
-                    </td>
-
-
-                    <td>
-                        ${esc(row.up3 || '')}
-                    </td>
-
-
-                    <td>
-                        ${esc(row.ulp || '')}
-                    </td>
-
-
-                    <td>
-                        ${esc(row.perangkat || '')}
-                    </td>
-
-
-                    <td>
-                        ${esc(row.pekerjaan || '')}
-                    </td>
-
-
-                    <td>
-                        ${esc(row.lokasi || '')}
-                    </td>
-
-
-                    <td>
-                        ${esc(row.petugas || '')}
-                    </td>
-
-
-                    <td>
-                        ${renderDocumentationCell(
-                            row.dokumentasi || ''
-                        )}
-                    </td>
-
-
-                </tr>
-
-            `
-        ).join('');
+  renderCurrentView();
 
 }
 
 
-
 /* =========================================================
-   JUMLAH PEKERJA
-========================================================= */
+   GLOBAL SEARCH
+   ========================================================= */
 
-function updateJumlahPekerja(rows) {
+document
+  .getElementById(
+    'globalSearch'
+  )
+  .addEventListener(
+    'input',
+    e=>{
+
+      const q =
+        e.target.value
+          .trim()
+          .toLowerCase();
 
 
-    const element =
+      const el =
         document.getElementById(
-            'jumlahPekerja'
+          'recentList'
         );
 
 
-    if (!element) {
+      const source =
+        q
+
+          ? rows.filter(r=>
+              [
+
+                r.timestamp,
+                r.pekerjaan,
+                r.petugas,
+                r.lokasi,
+                r.perangkat,
+                r.up3,
+                r.ulp,
+                r.dokumentasi
+
+              ]
+              .join(' ')
+              .toLowerCase()
+              .includes(q)
+            )
+
+          : rows;
+
+
+      const sorted =
+        [...source]
+          .sort(
+            (a,b)=>
+              (b._date?.getTime() || 0) -
+              (a._date?.getTime() || 0)
+          )
+          .slice(0,8);
+
+
+      if(!sorted.length){
+
+        el.innerHTML =
+          '<div class="empty-mini">Tidak ada hasil.</div>';
+
         return;
+
+      }
+
+
+      el.innerHTML =
+        sorted.map(r=>`
+
+          <div class="recent-item">
+
+            <div>
+
+              <div class="rname">
+
+                ${esc(r.pekerjaan) || '—'}
+
+              </div>
+
+
+              <div class="rloc">
+
+                ${esc(
+                  r.lokasi ||
+                  r.ulp ||
+                  '—'
+                )}
+
+              </div>
+
+            </div>
+
+
+            <div class="recent-right">
+
+              <span class="rdate">
+
+                ${fmtDate(
+                  r._date,
+                  r.timestamp
+                )}
+
+              </span>
+
+
+              <span
+                class="badge"
+                style="background:${colorFor(r.pekerjaan)}">
+
+                ${esc(r.pekerjaan) || '—'}
+
+              </span>
+
+            </div>
+
+          </div>
+
+        `).join('');
+
     }
+  );
 
 
-    const pekerjaSet =
-        new Set();
+/* =========================================================
+   DRAWER
+   ========================================================= */
+
+const drawer =
+  document.getElementById(
+    'dataDrawer'
+  );
 
 
-    (rows || []).forEach(
-        row => {
+const overlay =
+  document.getElementById(
+    'drawerOverlay'
+  );
 
 
-            const nama =
-                String(
-                    row.petugas || ''
-                ).trim();
+function openDrawer(){
+
+  drawer.classList.add('open');
+
+  overlay.classList.add('open');
+
+}
 
 
-            if (nama) {
+function closeDrawerFn(){
 
-                pekerjaSet.add(
-                    nama
+  drawer.classList.remove('open');
+
+  overlay.classList.remove('open');
+
+}
+
+
+document
+  .getElementById(
+    'settingsBtn'
+  )
+  .addEventListener(
+    'click',
+    openDrawer
+  );
+
+
+document
+  .getElementById(
+    'openDataDrawerLink'
+  )
+  .addEventListener(
+    'click',
+    e=>{
+
+      e.preventDefault();
+
+      openDrawer();
+
+    }
+  );
+
+
+document
+  .getElementById(
+    'closeDrawer'
+  )
+  .addEventListener(
+    'click',
+    closeDrawerFn
+  );
+
+
+overlay.addEventListener(
+  'click',
+  closeDrawerFn
+);
+
+
+/* =========================================================
+   FILE INPUT
+   ========================================================= */
+
+document
+  .getElementById(
+    'fileInput'
+  )
+  .addEventListener(
+    'change',
+    function(e){
+
+      const file =
+        e.target.files[0];
+
+
+      if(!file)
+        return;
+
+
+      const name =
+        file.name.toLowerCase();
+
+
+      const reader =
+        new FileReader();
+
+
+      reader.onload =
+        function(evt){
+
+          try{
+
+            if(
+              name.endsWith('.csv')
+            ){
+
+              ingest(
+
+                Papa.parse(
+                  evt.target.result,
+                  {
+                    header:true,
+                    skipEmptyLines:true
+                  }
+                ).data,
+
+                `file "${file.name}"`
+
+              );
+
+            }else{
+
+              const wb =
+                XLSX.read(
+                  evt.target.result,
+                  {
+                    type:'array'
+                  }
                 );
 
-            }
 
-
-        }
-    );
-
-
-    element.textContent =
-        pekerjaSet.size;
-
-}
-
-
-
-/* =========================================================
-   DIREKTORI CCTV
-========================================================= */
-
-function renderDirektoriView(rows) {
-
-
-    const tbody =
-        document.querySelector(
-            '#direktoriTable tbody'
-        );
-
-
-    if (!tbody) {
-        return;
-    }
-
-
-    if (
-        !Array.isArray(rows) ||
-        rows.length === 0
-    ) {
-
-
-        tbody.innerHTML = `
-
-            <tr>
-
-                <td
-                    colspan="7"
-                    class="empty-cell">
-
-                    Tidak ada data.
-
-                </td>
-
-            </tr>
-
-        `;
-
-
-        return;
-
-    }
-
-
-    tbody.innerHTML =
-        rows.map(
-            row => `
-
-                <tr>
-
-                    <td>
-                        ${esc(fmtDate(row))}
-                    </td>
-
-                    <td>
-                        ${esc(row.up3 || '')}
-                    </td>
-
-                    <td>
-                        ${esc(row.ulp || '')}
-                    </td>
-
-                    <td>
-                        ${esc(row.perangkat || '')}
-                    </td>
-
-                    <td>
-                        ${esc(row.lokasi || '')}
-                    </td>
-
-                    <td>
-                        ${esc(row.petugas || '')}
-                    </td>
-
-                    <td>
-                        ${renderDocumentationCell(
-                            row.dokumentasi || ''
-                        )}
-                    </td>
-
-                </tr>
-
-            `
-        ).join('');
-
-}
-
-
-
-/* =========================================================
-   SEARCH LOG PEKERJAAN
-========================================================= */
-
-function setupKelolaSearch() {
-
-
-    const search =
-        document.getElementById(
-            'kelolaSearch'
-        );
-
-
-    if (!search) {
-        return;
-    }
-
-
-    search.addEventListener(
-        'input',
-        function() {
-
-
-            const keyword =
-                this.value
-                    .toLowerCase()
-                    .trim();
-
-
-            if (!keyword) {
-
-
-                currentKelolaRows =
-                    [
-                        ...normalizedRows
-                    ];
-
-
-            } else {
-
-
-                currentKelolaRows =
-                    normalizedRows.filter(
-                        row => {
-
-
-                            return [
-
-                                row.timestamp,
-
-                                row.up3,
-
-                                row.ulp,
-
-                                row.perangkat,
-
-                                row.pekerjaan,
-
-                                row.lokasi,
-
-                                row.petugas,
-
-                                row.dokumentasi
-
-                            ]
-                            .join(' ')
-                            .toLowerCase()
-                            .includes(
-                                keyword
-                            );
-
-
-                        }
-                    );
-
+              const json =
+                XLSX.utils.sheet_to_json(
+                  wb.Sheets[
+                    wb.SheetNames[0]
+                  ],
+                  {
+                    defval:''
+                  }
+                );
+
+
+              ingest(
+                json,
+                `file "${file.name}"`
+              );
 
             }
 
+          }catch(err){
 
-            renderKelolaTable(
-                currentKelolaRows
+            setStatus(
+              'Gagal membaca file: ' +
+              err.message,
+              'err'
             );
 
+          }
 
-            updateJumlahPekerja(
-                currentKelolaRows
-            );
+        };
 
 
-        }
-    );
+      if(
+        name.endsWith('.csv')
+      ){
 
-}
+        reader.readAsText(file);
 
+      }else{
+
+        reader.readAsArrayBuffer(file);
+
+      }
+
+    }
+  );
 
 
 /* =========================================================
-   SEARCH DIREKTORI
-========================================================= */
+   LOAD URL
+   ========================================================= */
 
-function setupDirektoriSearch() {
+document
+  .getElementById(
+    'loadUrlBtn'
+  )
+  .addEventListener(
+    'click',
+    async ()=>{
+
+      const url =
+        document
+          .getElementById(
+            'csvUrlInput'
+          )
+          .value
+          .trim();
 
 
-    const search =
-        document.getElementById(
-            'direktoriSearch'
+      if(!url){
+
+        setStatus(
+          'Masukkan URL terlebih dahulu.',
+          'err'
         );
 
-
-    if (!search) {
         return;
-    }
+
+      }
 
 
-    search.addEventListener(
-        'input',
-        function() {
+      setStatus(
+        'Mengambil data dari URL…'
+      );
 
 
-            const keyword =
-                this.value
-                    .toLowerCase()
-                    .trim();
+      try{
+
+        const data =
+          await fetchAndParse(
+            url
+          );
 
 
-            if (!keyword) {
-
-
-                currentDirektoriRows =
-                    [
-                        ...normalizedRows
-                    ];
-
-
-            } else {
-
-
-                currentDirektoriRows =
-                    normalizedRows.filter(
-                        row => {
-
-
-                            return [
-
-                                row.timestamp,
-
-                                row.up3,
-
-                                row.ulp,
-
-                                row.perangkat,
-
-                                row.lokasi,
-
-                                row.petugas,
-
-                                row.dokumentasi
-
-                            ]
-                            .join(' ')
-                            .toLowerCase()
-                            .includes(
-                                keyword
-                            );
-
-
-                        }
-                    );
-
-
-            }
-
-
-            renderDirektoriView(
-                currentDirektoriRows
-            );
-
-
-        }
-    );
-
-}
-
-
-
-/* =========================================================
-   EXPORT
-========================================================= */
-
-function setupExport() {
-
-
-    const button =
-        document.getElementById(
-            'kelolaExportBtn'
+        ingest(
+          data,
+          'sumber otomatis'
         );
 
 
-    if (!button) {
+        localStorage.setItem(
+          STORAGE_URL_KEY,
+          url
+        );
+
+
+        document
+          .getElementById(
+            'refreshBtn'
+          )
+          .style.display =
+            'inline-block';
+
+
+        startAutoRefresh();
+
+
+      }catch(err){
+
+        setStatus(
+          'Gagal mengambil URL (kemungkinan CORS, atau sheet belum dipublikasikan). Coba Apps Script atau unggah file. Detail: ' +
+          err.message,
+          'err'
+        );
+
+      }
+
+    }
+  );
+
+
+/* =========================================================
+   REFRESH
+   ========================================================= */
+
+document
+  .getElementById(
+    'refreshBtn'
+  )
+  .addEventListener(
+    'click',
+    ()=>refreshFromSavedSource(true)
+  );
+
+
+/* =========================================================
+   PASTE CSV
+   ========================================================= */
+
+document
+  .getElementById(
+    'loadPasteBtn'
+  )
+  .addEventListener(
+    'click',
+    ()=>{
+
+      const text =
+        document
+          .getElementById(
+            'csvPasteInput'
+          )
+          .value
+          .trim();
+
+
+      if(!text){
+
+        setStatus(
+          'Tempel data CSV terlebih dahulu.',
+          'err'
+        );
+
         return;
+
+      }
+
+
+      ingest(
+
+        Papa.parse(
+          text,
+          {
+            header:true,
+            skipEmptyLines:true
+          }
+        ).data,
+
+        'data tempel'
+
+      );
+
     }
+  );
 
 
-    button.addEventListener(
-        'click',
-        function() {
+/* =========================================================
+   SAMPLE DATA
+   ========================================================= */
+
+document
+  .getElementById(
+    'sampleBtn'
+  )
+  .addEventListener(
+    'click',
+    ()=>{
+
+      const sample = [
+
+        {
+
+          Timestamp:
+            '24/11/2025 08:23:56',
+
+          'Unit UP3':
+            'UP3 Kendari',
+
+          'Unit ULP':
+            'ULP Wua Wua',
+
+          'NAMA PERANGKAT CCTV':
+            'CCTV WUA WUA',
+
+          'Nama Pekerjaan':
+            'Pelayanan Gangguan',
+
+          'Lokasi Pekerjaan':
+            'Kendari',
+
+          'Petugas Pelaksana di Lapangan':
+            'Andi Saputra',
+
+          'Dokumentasi CCTV':
+            'https://drive.google.com/open?id=1a',
+
+          'Deskripsi':
+            'Perbaikan koneksi jaringan CCTV pasca gangguan listrik.'
+
+        },
 
 
-            if (
-                !currentKelolaRows.length
-            ) {
+        {
+
+          Timestamp:
+            '24/11/2025 10:05:12',
+
+          'Unit UP3':
+            'UP3 Kendari',
+
+          'Unit ULP':
+            'ULP Kolaka',
+
+          'NAMA PERANGKAT CCTV':
+            'CCTV KOLAKA 02',
+
+          'Nama Pekerjaan':
+            'Pemeliharaan Rutin',
+
+          'Lokasi Pekerjaan':
+            'Kolaka',
+
+          'Petugas Pelaksana di Lapangan':
+            'Budi Santoso',
+
+          'Dokumentasi CCTV':
+            'https://drive.google.com/open?id=1b',
+
+          'Deskripsi':
+            'Pembersihan lensa kamera.'
+
+        },
 
 
-                alert(
-                    'Tidak ada data untuk diekspor.'
-                );
+        {
+
+          Timestamp:
+            '23/11/2025 14:40:00',
+
+          'Unit UP3':
+            'UP3 Bau-Bau',
+
+          'Unit ULP':
+            'ULP Baubau Kota',
+
+          'NAMA PERANGKAT CCTV':
+            'CCTV GARDU INDUK',
+
+          'Nama Pekerjaan':
+            'Instalasi Baru',
+
+          'Lokasi Pekerjaan':
+            'Baubau',
+
+          'Petugas Pelaksana di Lapangan':
+            'Citra Dewi',
+
+          'Dokumentasi CCTV':
+            'https://drive.google.com/open?id=1c',
+
+          'Deskripsi':
+            'Pemasangan unit CCTV baru.'
+
+        },
 
 
-                return;
+        {
 
-            }
+          Timestamp:
+            '22/11/2025 09:15:30',
 
+          'Unit UP3':
+            'UP3 Kendari',
 
-            const exportRows =
-                currentKelolaRows.map(
-                    row => ({
+          'Unit ULP':
+            'ULP Wua Wua',
 
+          'NAMA PERANGKAT CCTV':
+            'CCTV WUA WUA',
 
-                        Tanggal:
-                            fmtDate(row),
+          'Nama Pekerjaan':
+            'Perbaikan Perangkat',
 
+          'Lokasi Pekerjaan':
+            'Kendari',
 
-                        UP3:
-                            row.up3 || '',
+          'Petugas Pelaksana di Lapangan':
+            'Andi Saputra',
 
+          'Dokumentasi CCTV':
+            'https://drive.google.com/open?id=1d',
 
-                        ULP:
-                            row.ulp || '',
+          'Deskripsi':
+            'Penggantian kabel power.'
 
-
-                        Perangkat:
-                            row.perangkat || '',
-
-
-                        Pekerjaan:
-                            row.pekerjaan || '',
-
-
-                        Lokasi:
-                            row.lokasi || '',
+        },
 
 
-                        Petugas:
-                            row.petugas || '',
+        {
+
+          Timestamp:
+            '21/11/2025 16:02:45',
+
+          'Unit UP3':
+            'UP3 Bau-Bau',
+
+          'Unit ULP':
+            'ULP Wolio',
+
+          'NAMA PERANGKAT CCTV':
+            'CCTV WOLIO',
+
+          'Nama Pekerjaan':
+            'Pemeliharaan Rutin',
+
+          'Lokasi Pekerjaan':
+            'Wolio',
+
+          'Petugas Pelaksana di Lapangan':
+            'Dedi Kurniawan',
+
+          'Dokumentasi CCTV':
+            'https://drive.google.com/open?id=1e',
+
+          'Deskripsi':
+            'Pengecekan rekaman 7 hari terakhir.'
+
+        },
 
 
-                        Dokumentasi:
-                            row.dokumentasi || ''
+        {
+
+          Timestamp:
+            '18/11/2025 11:30:00',
+
+          'Unit UP3':
+            'UP3 Kendari',
+
+          'Unit ULP':
+            'ULP Kolaka',
+
+          'NAMA PERANGKAT CCTV':
+            'CCTV KOLAKA 02',
+
+          'Nama Pekerjaan':
+            'Pelayanan Gangguan',
+
+          'Lokasi Pekerjaan':
+            'Kolaka',
+
+          'Petugas Pelaksana di Lapangan':
+            'Budi Santoso',
+
+          'Dokumentasi CCTV':
+            'https://drive.google.com/open?id=1f',
+
+          'Deskripsi':
+            'Gangguan sinyal kamera akibat cuaca ekstrem.'
+
+        },
 
 
-                    })
-                );
+        {
 
+          Timestamp:
+            '15/11/2025 13:10:00',
 
-            const worksheet =
-                XLSX.utils.json_to_sheet(
-                    exportRows
-                );
+          'Unit UP3':
+            'UP3 Bau-Bau',
 
+          'Unit ULP':
+            'ULP Baubau Kota',
 
-            const workbook =
-                XLSX.utils.book_new();
+          'NAMA PERANGKAT CCTV':
+            'CCTV GARDU INDUK',
 
+          'Nama Pekerjaan':
+            'Perbaikan Perangkat',
 
-            XLSX.utils.book_append_sheet(
-                workbook,
-                worksheet,
-                'Log Pekerjaan'
-            );
+          'Lokasi Pekerjaan':
+            'Baubau',
 
+          'Petugas Pelaksana di Lapangan':
+            'Citra Dewi',
 
-            XLSX.writeFile(
-                workbook,
-                'log-pekerjaan-cctv.xlsx'
-            );
+          'Dokumentasi CCTV':
+            'https://drive.google.com/open?id=1g',
 
+          'Deskripsi':
+            'Perbaikan bracket kamera yang longgar.'
 
         }
+
+      ];
+
+
+      ingest(
+        sample,
+        'data contoh'
+      );
+
+    }
+  );
+
+
+/* =========================================================
+   CLEAR DATA
+   ========================================================= */
+
+document
+  .getElementById(
+    'clearBtn'
+  )
+  .addEventListener(
+    'click',
+    ()=>{
+
+      rows = [];
+
+
+      localStorage.removeItem(
+        STORAGE_ROWS_KEY
+      );
+
+
+      localStorage.removeItem(
+        STORAGE_URL_KEY
+      );
+
+
+      document
+        .getElementById(
+          'refreshBtn'
+        )
+        .style.display =
+          'none';
+
+
+      setStatus(
+        'Data tersimpan telah dihapus.'
+      );
+
+
+      if(autoRefreshTimer){
+
+        clearInterval(
+          autoRefreshTimer
+        );
+
+      }
+
+
+      renderAll();
+
+    }
+  );
+
+
+/* =========================================================
+   AUTO REFRESH
+   ========================================================= */
+
+function startAutoRefresh(){
+
+  if(autoRefreshTimer){
+
+    clearInterval(
+      autoRefreshTimer
+    );
+
+  }
+
+
+  autoRefreshTimer =
+    setInterval(
+      ()=>refreshFromSavedSource(false),
+      5 * 60 * 1000
     );
 
 }
 
 
+async function refreshFromSavedSource(
+  manual
+){
 
-/* =========================================================
-   REKAP
-========================================================= */
-
-function updateRekap() {
-
-
-    const pekerjaan =
-        document.getElementById(
-            'rekapPekerjaan'
-        );
-
-
-    const up3 =
-        document.getElementById(
-            'rekapUP3'
-        );
-
-
-    const ulp =
-        document.getElementById(
-            'rekapULP'
-        );
-
-
-    const pekerjaanSet =
-        new Set();
-
-
-    const up3Set =
-        new Set();
-
-
-    const ulpSet =
-        new Set();
-
-
-    normalizedRows.forEach(
-        row => {
-
-
-            if (row.pekerjaan) {
-
-                pekerjaanSet.add(
-                    String(
-                        row.pekerjaan
-                    ).trim()
-                );
-
-            }
-
-
-            if (row.up3) {
-
-                up3Set.add(
-                    String(
-                        row.up3
-                    ).trim()
-                );
-
-            }
-
-
-            if (row.ulp) {
-
-                ulpSet.add(
-                    String(
-                        row.ulp
-                    ).trim()
-                );
-
-            }
-
-
-        }
+  const url =
+    localStorage.getItem(
+      STORAGE_URL_KEY
     );
 
 
-    if (pekerjaan) {
+  if(!url)
+    return;
 
-        pekerjaan.textContent =
-            pekerjaanSet.size;
+
+  try{
+
+    if(manual){
+
+      setStatus(
+        'Menyegarkan data…'
+      );
+
+    }
+
+
+    const data =
+      await fetchAndParse(
+        url
+      );
+
+
+    ingest(
+      data,
+      'sumber otomatis (diperbarui)'
+    );
+
+
+  }catch(err){
+
+    if(manual){
+
+      setStatus(
+        'Gagal menyegarkan: ' +
+        err.message,
+        'err'
+      );
 
     }
 
-
-    if (up3) {
-
-        up3.textContent =
-            up3Set.size;
-
-    }
-
-
-    if (ulp) {
-
-        ulp.textContent =
-            ulpSet.size;
-
-    }
+  }
 
 }
 
 
+/* =========================================================
+   THEME
+   ========================================================= */
+
+document
+  .getElementById(
+    'themeToggle'
+  )
+  .addEventListener(
+    'click',
+    ()=>{
+
+      document.body
+        .classList
+        .toggle(
+          'theme-light'
+        );
+
+
+      localStorage.setItem(
+
+        STORAGE_THEME_KEY,
+
+        document.body
+          .classList
+          .contains(
+            'theme-light'
+          )
+            ? 'light'
+            : 'dark'
+
+      );
+
+    }
+  );
+
 
 /* =========================================================
-   VIEW RENDERERS
-========================================================= */
+   SIDEBAR
+   ========================================================= */
+
+document
+  .getElementById(
+    'sidebarToggle'
+  )
+  .addEventListener(
+    'click',
+    ()=>{
+
+      document
+        .getElementById(
+          'sidebar'
+        )
+        .classList
+        .toggle(
+          'collapsed'
+        );
+
+    }
+  );
+
+
+/* =========================================================
+   VIEW SWITCHING
+   ========================================================= */
 
 const VIEW_RENDERERS = {
 
+  'petugas-tambah':
+    renderPetugasTambahView,
 
-    'dashboard':
-        function() {
+  'petugas-kontak':
+    renderPetugasKontakView,
 
-            updateDashboard();
+  'petugas-grafik':
+    renderPetugasGrafikView,
 
-        },
+  'cctv-direktori':
+    renderDirektoriView,
 
+  /*
+   * PERUBAHAN:
+   * data-kelola -> pekerjaan-log
+   */
 
-    'cctv-direktori':
-        function() {
+  'pekerjaan-log':
+    renderKelolaDataView,
 
-            currentDirektoriRows =
-                [
-                    ...normalizedRows
-                ];
+  'laporan-rekap':
+    renderRekapView,
 
+  'profil':
+    renderProfilView,
 
-            renderDirektoriView(
-                currentDirektoriRows
-            );
+  'kalender':
+    renderKalenderView,
 
-        },
+  'faq':
+    renderFaqView,
 
+  'metrik-unit':
+    renderMetrikUnitView,
 
-    /*
-       PENTING:
+  'metrik-akumulasi':
+    renderMetrikAkumulasiView,
 
-       data-view HTML:
-
-       pekerjaan-log
-
-       harus menuju:
-
-       renderKelolaDataView
-    */
-
-    'pekerjaan-log':
-        renderKelolaDataView,
-
-
-    'laporan-rekap':
-        updateRekap
+  'metrik-peta':
+    renderMetrikPetaView
 
 };
 
 
-
-/* =========================================================
-   NAVIGATION
-========================================================= */
-
-function setupNavigation() {
+let currentView =
+  'dashboard';
 
 
-    const links =
-        document.querySelectorAll(
-            '.nav-link'
+function showView(viewId){
+
+  document
+    .querySelectorAll(
+      '.view'
+    )
+    .forEach(
+      v =>
+        v.classList.remove(
+          'active'
+        )
+    );
+
+
+  const target =
+    document.getElementById(
+      'view-' + viewId
+    );
+
+
+  if(!target)
+    return;
+
+
+  target.classList.add(
+    'active'
+  );
+
+
+  currentView =
+    viewId;
+
+
+  document
+    .querySelectorAll(
+      '.nav-link[data-view]'
+    )
+    .forEach(l=>{
+
+      l.classList.toggle(
+        'active',
+        l.dataset.view === viewId
+      );
+
+    });
+
+
+  if(
+    VIEW_RENDERERS[viewId]
+  ){
+
+    VIEW_RENDERERS[viewId]();
+
+  }
+
+}
+
+
+function renderCurrentView(){
+
+  if(
+    currentView !== 'dashboard' &&
+    VIEW_RENDERERS[currentView]
+  ){
+
+    VIEW_RENDERERS[currentView]();
+
+  }
+
+}
+
+
+document
+  .querySelectorAll(
+    '.nav-link[data-view]'
+  )
+  .forEach(link=>{
+
+    link.addEventListener(
+      'click',
+      e=>{
+
+        e.preventDefault();
+
+
+        showView(
+          link.dataset.view
         );
 
+      }
+    );
 
-    links.forEach(
-        link => {
-
-
-            link.addEventListener(
-                'click',
-                function(event) {
+  });
 
 
-                    event.preventDefault();
+/* =========================================================
+   DATA PETUGAS
+   ========================================================= */
+
+function loadPetugas(){
+
+  try{
+
+    return JSON.parse(
+      localStorage.getItem(
+        STORAGE_PETUGAS_KEY
+      )
+    ) || [];
+
+  }catch(e){
+
+    return [];
+
+  }
+
+}
 
 
-                    const viewName =
-                        this.dataset.view;
+function savePetugas(list){
+
+  localStorage.setItem(
+    STORAGE_PETUGAS_KEY,
+    JSON.stringify(list)
+  );
+
+}
 
 
-                    if (!viewName) {
-                        return;
-                    }
+function renderPetugasTambahView(){
+
+  renderPetugasTable();
+
+}
 
 
-                    /*
-                       ACTIVE MENU
-                    */
+function renderPetugasTable(){
 
-                    links.forEach(
-                        item => {
-
-                            item.classList.remove(
-                                'active'
-                            );
-
-                        }
-                    );
+  const list =
+    loadPetugas();
 
 
-                    this.classList.add(
-                        'active'
-                    );
+  const tbody =
+    document.querySelector(
+      '#petugasTable tbody'
+    );
 
 
-                    /*
-                       HIDE SEMUA VIEW
-                    */
+  if(!list.length){
 
-                    document
-                        .querySelectorAll(
-                            '.view'
-                        )
-                        .forEach(
-                            view => {
+    tbody.innerHTML =
+      '<tr><td colspan="5" class="empty-mini">Belum ada petugas ditambahkan.</td></tr>';
 
-                                view.classList.remove(
-                                    'active'
-                                );
+    return;
 
-                            }
-                        );
+  }
 
 
-                    /*
-                       TAMPILKAN VIEW
-                    */
+  tbody.innerHTML =
+    list.map(p=>`
 
-                    const target =
-                        document.getElementById(
-                            `view-${viewName}`
-                        );
+      <tr>
 
+        <td>
+          ${esc(p.nama)}
+        </td>
 
-                    if (target) {
+        <td>
+          ${esc(p.telepon) || '—'}
+        </td>
 
-                        target.classList.add(
-                            'active'
-                        );
+        <td>
+          ${esc(p.email) || '—'}
+        </td>
 
-                    }
+        <td>
+          ${esc(p.unit) || '—'}
+        </td>
 
+        <td>
 
-                    /*
-                       JUDUL
-                    */
+          <span
+            class="link-btn"
+            data-edit="${p.id}">
 
-                    const titleMap = {
+            Edit
 
-
-                        'dashboard':
-                            'Dashboard',
-
-
-                        'cctv-direktori':
-                            'Direktori CCTV',
+          </span>
 
 
-                        'pekerjaan-log':
-                            'Log Pekerjaan',
+          <span
+            class="link-btn danger"
+            data-del="${p.id}">
+
+            Hapus
+
+          </span>
+
+        </td>
+
+      </tr>
+
+    `).join('');
 
 
-                        'laporan-rekap':
-                            'Rekap Laporan'
+  tbody
+    .querySelectorAll(
+      '[data-edit]'
+    )
+    .forEach(
+      el =>
+        el.addEventListener(
+          'click',
+          ()=>startEditPetugas(
+            el.dataset.edit
+          )
+        )
+    );
 
 
-                    };
-
-
-                    const title =
-                        document.getElementById(
-                            'topTitle'
-                        );
-
-
-                    if (title) {
-
-                        title.textContent =
-                            titleMap[
-                                viewName
-                            ] ||
-                            viewName;
-
-                    }
-
-
-                    /*
-                       RENDER
-                    */
-
-                    const renderer =
-                        VIEW_RENDERERS[
-                            viewName
-                        ];
-
-
-                    if (
-                        typeof renderer ===
-                        'function'
-                    ) {
-
-                        renderer();
-
-                    }
-
-
-                }
-            );
-
-
-        }
+  tbody
+    .querySelectorAll(
+      '[data-del]'
+    )
+    .forEach(
+      el =>
+        el.addEventListener(
+          'click',
+          ()=>deletePetugas(
+            el.dataset.del
+          )
+        )
     );
 
 }
 
 
+function startEditPetugas(id){
 
-/* =========================================================
-   INITIALIZE
-========================================================= */
-
-document.addEventListener(
-    'DOMContentLoaded',
-    function() {
-
-
-        setupNavigation();
+  const p =
+    loadPetugas()
+      .find(
+        x => x.id === id
+      );
 
 
-        setupKelolaSearch();
+  if(!p)
+    return;
 
 
-        setupDirektoriSearch();
+  document
+    .getElementById(
+      'petugasEditId'
+    )
+    .value =
+      p.id;
 
 
-        setupExport();
+  document
+    .getElementById(
+      'petugasNama'
+    )
+    .value =
+      p.nama || '';
 
 
-        /*
-           LOAD DATA
-        */
+  document
+    .getElementById(
+      'petugasTelepon'
+    )
+    .value =
+      p.telepon || '';
 
-        loadSpreadsheet();
 
+  document
+    .getElementById(
+      'petugasEmail'
+    )
+    .value =
+      p.email || '';
+
+
+  document
+    .getElementById(
+      'petugasUnit'
+    )
+    .value =
+      p.unit || '';
+
+
+  document
+    .getElementById(
+      'petugasFormTitle'
+    )
+    .textContent =
+      'Edit Petugas';
+
+
+  document
+    .getElementById(
+      'petugasSubmitBtn'
+    )
+    .textContent =
+      'Simpan Perubahan';
+
+
+  document
+    .getElementById(
+      'petugasCancelEdit'
+    )
+    .style.display =
+      'inline-block';
+
+}
+
+
+function resetPetugasForm(){
+
+  document
+    .getElementById(
+      'petugasForm'
+    )
+    .reset();
+
+
+  document
+    .getElementById(
+      'petugasEditId'
+    )
+    .value =
+      '';
+
+
+  document
+    .getElementById(
+      'petugasFormTitle'
+    )
+    .textContent =
+      'Tambah Petugas Baru';
+
+
+  document
+    .getElementById(
+      'petugasSubmitBtn'
+    )
+    .textContent =
+      'Simpan Petugas';
+
+
+  document
+    .getElementById(
+      'petugasCancelEdit'
+    )
+    .style.display =
+      'none';
+
+}
+
+
+function deletePetugas(id){
+
+  const list =
+    loadPetugas()
+      .filter(
+        p => p.id !== id
+      );
+
+
+  savePetugas(list);
+
+
+  renderPetugasTable();
+
+
+  if(
+    currentView ===
+    'petugas-kontak'
+  ){
+
+    renderKontakGrid();
+
+  }
+
+}
+
+
+document
+  .getElementById(
+    'petugasForm'
+  )
+  .addEventListener(
+    'submit',
+    e=>{
+
+      e.preventDefault();
+
+
+      const id =
+        document
+          .getElementById(
+            'petugasEditId'
+          )
+          .value;
+
+
+      const nama =
+        document
+          .getElementById(
+            'petugasNama'
+          )
+          .value
+          .trim();
+
+
+      if(!nama)
+        return;
+
+
+      const data = {
+
+        id:
+          id || uid(),
+
+        nama,
+
+        telepon:
+          document
+            .getElementById(
+              'petugasTelepon'
+            )
+            .value
+            .trim(),
+
+        email:
+          document
+            .getElementById(
+              'petugasEmail'
+            )
+            .value
+            .trim(),
+
+        unit:
+          document
+            .getElementById(
+              'petugasUnit'
+            )
+            .value
+            .trim()
+
+      };
+
+
+      let list =
+        loadPetugas();
+
+
+      if(id){
+
+        list =
+          list.map(
+            p =>
+              p.id === id
+                ? data
+                : p
+          );
+
+      }else{
+
+        list.push(data);
+
+      }
+
+
+      savePetugas(list);
+
+      resetPetugasForm();
+
+      renderPetugasTable();
 
     }
+  );
+
+
+document
+  .getElementById(
+    'petugasCancelEdit'
+  )
+  .addEventListener(
+    'click',
+    resetPetugasForm
+  );
+
+
+function renderPetugasKontakView(){
+
+  renderKontakGrid();
+
+}
+
+
+function renderKontakGrid(){
+
+  const list =
+    loadPetugas();
+
+
+  const el =
+    document.getElementById(
+      'kontakGrid'
+    );
+
+
+  if(!list.length){
+
+    el.innerHTML =
+      '<div class="empty-mini">Belum ada petugas terdaftar. Tambahkan lewat menu "Tambah Petugas".</div>';
+
+    return;
+
+  }
+
+
+  el.innerHTML =
+    list.map(p=>`
+
+      <div class="kontak-card">
+
+        <div class="kname">
+
+          ${esc(p.nama)}
+
+        </div>
+
+
+        <div class="krow">
+
+          <b>Telepon:</b>
+
+          ${esc(p.telepon) || '—'}
+
+        </div>
+
+
+        <div class="krow">
+
+          <b>Email:</b>
+
+          ${esc(p.email) || '—'}
+
+        </div>
+
+
+        <div class="krow">
+
+          <b>Unit:</b>
+
+          ${esc(p.unit) || '—'}
+
+        </div>
+
+      </div>
+
+    `).join('');
+
+}
+
+
+/* =========================================================
+   GRAFIK PETUGAS
+   ========================================================= */
+
+function renderPetugasGrafikView(){
+
+  const counts = {};
+
+
+  rows.forEach(r=>{
+
+    if(r.petugas){
+
+      counts[r.petugas] =
+        (counts[r.petugas] || 0) + 1;
+
+    }
+
+  });
+
+
+  const entries =
+    Object.entries(counts)
+      .sort(
+        (a,b)=>
+          b[1] - a[1]
+      )
+      .slice(0,12);
+
+
+  if(petugasChart)
+    petugasChart.destroy();
+
+
+  petugasChart =
+    new Chart(
+      document.getElementById(
+        'petugasChart'
+      ),
+      {
+
+        type:'bar',
+
+        data:{
+
+          labels:
+            entries.map(
+              e=>e[0]
+            ),
+
+          datasets:[{
+
+            label:
+              'Jumlah Pekerjaan',
+
+            data:
+              entries.map(
+                e=>e[1]
+              ),
+
+            backgroundColor:
+              '#5aa4f5'
+
+          }]
+
+        },
+
+        options:{
+
+          indexAxis:'y',
+
+          responsive:true,
+
+          plugins:{
+
+            legend:{
+              display:false
+            }
+
+          },
+
+          scales:{
+
+            x:{
+
+              grid:{
+                color:'#233a5e'
+              },
+
+              ticks:{
+                color:'#93a6c4',
+                precision:0
+              },
+
+              beginAtZero:true
+
+            },
+
+            y:{
+
+              grid:{
+                display:false
+              },
+
+              ticks:{
+                color:'#93a6c4',
+                font:{
+                  size:11
+                }
+              }
+
+            }
+
+          }
+
+        }
+
+      }
+    );
+
+}
+
+
+/* =========================================================
+   DIREKTORI CCTV
+   ========================================================= */
+
+function renderDirektoriView(){
+
+  const byDevice = {};
+
+
+  rows.forEach(r=>{
+
+    if(!r.perangkat)
+      return;
+
+
+    if(
+      !byDevice[r.perangkat]
+    ){
+
+      byDevice[r.perangkat] = {
+
+        count:0,
+
+        latest:null
+
+      };
+
+    }
+
+
+    byDevice[
+      r.perangkat
+    ].count++;
+
+
+    if(
+      !byDevice[
+        r.perangkat
+      ].latest ||
+
+      (
+        r._date &&
+        r._date >
+        byDevice[
+          r.perangkat
+        ].latest._date
+      )
+    ){
+
+      byDevice[
+        r.perangkat
+      ].latest = r;
+
+    }
+
+  });
+
+
+  const tbody =
+    document.querySelector(
+      '#direktoriTable tbody'
+    );
+
+
+  const entries =
+    Object.entries(
+      byDevice
+    );
+
+
+  if(!entries.length){
+
+    tbody.innerHTML =
+      '<tr><td colspan="5" class="empty-mini">Belum ada data perangkat.</td></tr>';
+
+    return;
+
+  }
+
+
+  tbody.innerHTML =
+    entries.map(
+      ([name,info])=>`
+
+        <tr>
+
+          <td>
+            ${esc(name)}
+          </td>
+
+
+          <td>
+            ${esc(
+              info.latest.ulp ||
+              info.latest.lokasi ||
+              '—'
+            )}
+          </td>
+
+
+          <td>
+
+            ${fmtDate(
+              info.latest._date,
+              info.latest.timestamp
+            )}
+
+          </td>
+
+
+          <td>
+            ${info.count}
+          </td>
+
+
+          <td>
+
+            ${
+              info.latest.dokumentasi
+
+                ? `<a
+                    class="link-btn"
+                    href="${esc(info.latest.dokumentasi)}"
+                    target="_blank"
+                    rel="noopener">
+
+                    ↗ Buka
+
+                  </a>`
+
+                : '—'
+            }
+
+          </td>
+
+        </tr>
+
+      `
+    ).join('');
+
+}
+
+
+/* =========================================================
+   LOG PEKERJAAN
+   ========================================================= */
+
+function renderKelolaDataView(){
+
+  renderKelolaTable(
+    rows
+  );
+
+}
+
+
+/* =========================================================
+   RENDER TABEL LOG PEKERJAAN
+   ========================================================= */
+
+function renderKelolaTable(
+  source
+){
+
+  const tbody =
+    document.querySelector(
+      '#kelolaTable tbody'
+    );
+
+
+  const sorted =
+    [...source]
+      .sort(
+        (a,b)=>
+          (b._date?.getTime() || 0) -
+          (a._date?.getTime() || 0)
+      );
+
+
+  if(!sorted.length){
+
+    tbody.innerHTML =
+      '<tr><td colspan="8" class="empty-mini">Belum ada data pekerjaan.</td></tr>';
+
+    return;
+
+  }
+
+
+  tbody.innerHTML =
+    sorted.map(r=>`
+
+      <tr>
+
+        <!-- TANGGAL + JAM -->
+
+        <td>
+
+          ${fmtDate(
+            r._date,
+            r.timestamp
+          )}
+
+        </td>
+
+
+        <!-- UP3 -->
+
+        <td>
+
+          ${esc(
+            r.up3
+          ) || '—'}
+
+        </td>
+
+
+        <!-- ULP -->
+
+        <td>
+
+          ${esc(
+            r.ulp
+          ) || '—'}
+
+        </td>
+
+
+        <!-- PERANGKAT -->
+
+        <td>
+
+          ${esc(
+            r.perangkat
+          ) || '—'}
+
+        </td>
+
+
+        <!-- PEKERJAAN -->
+
+        <td>
+
+          ${esc(
+            r.pekerjaan
+          ) || '—'}
+
+        </td>
+
+
+        <!-- LOKASI -->
+
+        <td>
+
+          ${esc(
+            r.lokasi
+          ) || '—'}
+
+        </td>
+
+
+        <!-- PETUGAS -->
+
+        <td>
+
+          ${esc(
+            r.petugas
+          ) || '—'}
+
+        </td>
+
+
+        <!-- DOKUMENTASI -->
+
+        <td>
+
+          ${documentationHtml(
+            r.dokumentasi,
+            r.pekerjaan ||
+            'Dokumentasi CCTV'
+          )}
+
+        </td>
+
+      </tr>
+
+    `).join('');
+
+
+  /*
+   * Aktifkan klik gambar
+   */
+
+  bindDocumentationImages();
+
+}
+
+
+/* =========================================================
+   SEARCH LOG PEKERJAAN
+   ========================================================= */
+
+document
+  .getElementById(
+    'kelolaSearch'
+  )
+  .addEventListener(
+    'input',
+    e=>{
+
+      const q =
+        e.target.value
+          .trim()
+          .toLowerCase();
+
+
+      const source =
+        q
+
+          ? rows.filter(r=>
+              [
+
+                r.timestamp,
+                r.pekerjaan,
+                r.petugas,
+                r.lokasi,
+                r.perangkat,
+                r.up3,
+                r.ulp,
+                r.dokumentasi
+
+              ]
+              .join(' ')
+              .toLowerCase()
+              .includes(q)
+            )
+
+          : rows;
+
+
+      renderKelolaTable(
+        source
+      );
+
+    }
+  );
+
+
+/* =========================================================
+   EXPORT LOG PEKERJAAN
+   ========================================================= */
+
+document
+  .getElementById(
+    'kelolaExportBtn'
+  )
+  .addEventListener(
+    'click',
+    ()=>{
+
+      const csv =
+        Papa.unparse(
+
+          rows.map(r=>({
+
+            Tanggal:
+              fmtDate(
+                r._date,
+                r.timestamp
+              ),
+
+            'Unit UP3':
+              r.up3 || '',
+
+            'Unit ULP':
+              r.ulp || '',
+
+            Perangkat:
+              r.perangkat || '',
+
+            Pekerjaan:
+              r.pekerjaan || '',
+
+            Lokasi:
+              r.lokasi || '',
+
+            Petugas:
+              r.petugas || '',
+
+            Dokumentasi:
+              r.dokumentasi || ''
+
+          }))
+
+        );
+
+
+      downloadCsv(
+        csv,
+        'log-pekerjaan.csv'
+      );
+
+    }
+  );
+
+
+/* =========================================================
+   DOWNLOAD CSV
+   ========================================================= */
+
+function downloadCsv(
+  csvText,
+  filename
+){
+
+  const blob =
+    new Blob(
+      [csvText],
+      {
+        type:
+          'text/csv;charset=utf-8;'
+      }
+    );
+
+
+  const url =
+    URL.createObjectURL(
+      blob
+    );
+
+
+  const a =
+    document.createElement(
+      'a'
+    );
+
+
+  a.href =
+    url;
+
+
+  a.download =
+    filename;
+
+
+  document.body.appendChild(
+    a
+  );
+
+
+  a.click();
+
+
+  document.body.removeChild(
+    a
+  );
+
+
+  URL.revokeObjectURL(
+    url
+  );
+
+}
+
+
+/* =========================================================
+   REKAP
+   ========================================================= */
+
+function renderRekapView(){
+
+  const sel =
+    document.getElementById(
+      'rekapBulan'
+    );
+
+
+  const months =
+    Array.from(
+      new Set(
+        rows
+          .filter(
+            r=>r._date
+          )
+          .map(
+            r =>
+              `${r._date.getFullYear()}-${r._date.getMonth()}`
+          )
+      )
+    )
+    .sort()
+    .reverse();
+
+
+  sel.innerHTML =
+    '<option value="all">Semua periode</option>' +
+
+    months.map(m=>{
+
+      const [
+        y,
+        mo
+      ] =
+        m
+          .split('-')
+          .map(Number);
+
+
+      return `
+
+        <option value="${m}">
+
+          ${BULAN_ID[mo]} ${y}
+
+        </option>
+
+      `;
+
+    }).join('');
+
+
+  sel.onchange =
+    renderRekapTable;
+
+
+  renderRekapTable();
+
+}
+
+
+function renderRekapTable(){
+
+  const sel =
+    document
+      .getElementById(
+        'rekapBulan'
+      )
+      .value ||
+      'all';
+
+
+  const source =
+    sel === 'all'
+
+      ? rows
+
+      : rows.filter(r=>{
+
+          if(!r._date)
+            return false;
+
+
+          const [
+            y,
+            mo
+          ] =
+            sel
+              .split('-')
+              .map(Number);
+
+
+          return
+            r._date.getFullYear() === y &&
+            r._date.getMonth() === mo;
+
+        });
+
+
+  const counts = {};
+
+
+  source.forEach(r=>{
+
+    if(r.pekerjaan){
+
+      counts[r.pekerjaan] =
+        (counts[r.pekerjaan] || 0) + 1;
+
+    }
+
+  });
+
+
+  const entries =
+    Object.entries(counts)
+      .sort(
+        (a,b)=>
+          b[1] - a[1]
+      );
+
+
+  const tbody =
+    document.querySelector(
+      '#rekapTable tbody'
+    );
+
+
+  tbody.innerHTML =
+    entries.length
+
+      ? entries
+          .map(
+            ([cat,n])=>
+              `<tr>
+                <td>${esc(cat)}</td>
+                <td>${n}</td>
+              </tr>`
+          )
+          .join('')
+
+      : '<tr><td colspan="2" class="empty-mini">Tidak ada data pada periode ini.</td></tr>';
+
+}
+
+
+document
+  .getElementById(
+    'rekapExportBtn'
+  )
+  .addEventListener(
+    'click',
+    ()=>{
+
+      const rowsForExport =
+
+        [
+          ...document
+            .querySelectorAll(
+              '#rekapTable tbody tr'
+            )
+        ]
+
+        .map(tr=>{
+
+          const tds =
+            tr.querySelectorAll(
+              'td'
+            );
+
+
+          return tds.length === 2
+
+            ? {
+
+                Kategori:
+                  tds[0].textContent,
+
+                Jumlah:
+                  tds[1].textContent
+
+              }
+
+            : null;
+
+        })
+
+        .filter(Boolean);
+
+
+      if(
+        !rowsForExport.length
+      )
+        return;
+
+
+      downloadCsv(
+        Papa.unparse(
+          rowsForExport
+        ),
+        'rekap-laporan.csv'
+      );
+
+    }
+  );
+
+
+/* =========================================================
+   PROFIL
+   ========================================================= */
+
+function loadProfile(){
+
+  try{
+
+    return JSON.parse(
+      localStorage.getItem(
+        STORAGE_PROFILE_KEY
+      )
+    ) || {
+
+      nama:'Admin',
+
+      role:'K3 Supervisor'
+
+    };
+
+  }catch(e){
+
+    return {
+
+      nama:'Admin',
+
+      role:'K3 Supervisor'
+
+    };
+
+  }
+
+}
+
+
+function applyProfileToSidebar(){
+
+  const p =
+    loadProfile();
+
+
+  document
+    .getElementById(
+      'profileName'
+    )
+    .textContent =
+      p.nama ||
+      'Admin';
+
+
+  document
+    .getElementById(
+      'profileRole'
+    )
+    .textContent =
+      p.role ||
+      'K3 Supervisor';
+
+
+  document
+    .getElementById(
+      'avatarInitial'
+    )
+    .textContent =
+
+      (
+        p.nama ||
+        'A'
+      )
+      .trim()
+      .charAt(0)
+      .toUpperCase() ||
+      'A';
+
+}
+
+
+function renderProfilView(){
+
+  const p =
+    loadProfile();
+
+
+  document
+    .getElementById(
+      'profilNama'
+    )
+    .value =
+      p.nama || '';
+
+
+  document
+    .getElementById(
+      'profilRole'
+    )
+    .value =
+      p.role || '';
+
+}
+
+
+document
+  .getElementById(
+    'profilForm'
+  )
+  .addEventListener(
+    'submit',
+    e=>{
+
+      e.preventDefault();
+
+
+      const data = {
+
+        nama:
+          document
+            .getElementById(
+              'profilNama'
+            )
+            .value
+            .trim() ||
+          'Admin',
+
+        role:
+          document
+            .getElementById(
+              'profilRole'
+            )
+            .value
+            .trim() ||
+          'K3 Supervisor'
+
+      };
+
+
+      localStorage.setItem(
+        STORAGE_PROFILE_KEY,
+        JSON.stringify(data)
+      );
+
+
+      applyProfileToSidebar();
+
+    }
+  );
+
+
+/* =========================================================
+   KALENDER
+   ========================================================= */
+
+function renderKalenderView(){
+
+  renderCalendar();
+
+}
+
+
+function renderCalendar(){
+
+  const year =
+    calCursor.getFullYear();
+
+
+  const month =
+    calCursor.getMonth();
+
+
+  const monthsFull = [
+
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember'
+
+  ];
+
+
+  document
+    .getElementById(
+      'calLabel'
+    )
+    .textContent =
+      `${monthsFull[month]} ${year}`;
+
+
+  const countByDay = {};
+
+
+  rows.forEach(r=>{
+
+    if(
+
+      r._date &&
+
+      r._date.getFullYear() === year &&
+
+      r._date.getMonth() === month
+
+    ){
+
+      const d =
+        r._date.getDate();
+
+
+      countByDay[d] =
+        (countByDay[d] || 0) + 1;
+
+    }
+
+  });
+
+
+  const firstDow =
+    new Date(
+      year,
+      month,
+      1
+    ).getDay();
+
+
+  const daysInMonth =
+    new Date(
+      year,
+      month + 1,
+      0
+    ).getDate();
+
+
+  const today =
+    new Date();
+
+
+  let cells =
+
+    [
+
+      'Min',
+      'Sen',
+      'Sel',
+      'Rab',
+      'Kam',
+      'Jum',
+      'Sab'
+
+    ]
+
+    .map(
+      d =>
+        `<div class="cal-dow">${d}</div>`
+    )
+    .join('');
+
+
+  for(
+    let i=0;
+    i<firstDow;
+    i++
+  ){
+
+    cells +=
+      '<div class="cal-day empty"></div>';
+
+  }
+
+
+  for(
+    let d=1;
+    d<=daysInMonth;
+    d++
+  ){
+
+    const isToday =
+
+      today.getFullYear() === year &&
+      today.getMonth() === month &&
+      today.getDate() === d;
+
+
+    cells += `
+
+      <div
+        class="cal-day${isToday ? ' today' : ''}"
+        data-day="${d}">
+
+        <span class="dnum">
+          ${d}
+        </span>
+
+        ${
+          countByDay[d]
+
+            ? `<span class="dcount">
+                ${countByDay[d]}
+              </span>`
+
+            : ''
+        }
+
+      </div>
+
+    `;
+
+  }
+
+
+  const grid =
+    document.getElementById(
+      'calendarGrid'
+    );
+
+
+  grid.innerHTML =
+    cells;
+
+
+  grid
+    .querySelectorAll(
+      '.cal-day[data-day]'
+    )
+    .forEach(cell=>{
+
+      cell.addEventListener(
+        'click',
+        ()=>showCalDayDetail(
+
+          year,
+
+          month,
+
+          parseInt(
+            cell.dataset.day,
+            10
+          )
+
+        )
+      );
+
+    });
+
+}
+
+
+function showCalDayDetail(
+  year,
+  month,
+  day
+){
+
+  const dayRows =
+    rows.filter(
+      r =>
+
+        r._date &&
+
+        r._date.getFullYear() === year &&
+
+        r._date.getMonth() === month &&
+
+        r._date.getDate() === day
+
+    );
+
+
+  const monthsFull = [
+
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember'
+
+  ];
+
+
+  document
+    .getElementById(
+      'calDayTitle'
+    )
+    .textContent =
+      `${day} ${monthsFull[month]} ${year} · ${dayRows.length} pekerjaan`;
+
+
+  const el =
+    document.getElementById(
+      'calDayList'
+    );
+
+
+  el.innerHTML =
+
+    dayRows.length
+
+      ? dayRows
+          .map(r=>`
+
+            <div class="recent-item">
+
+              <div>
+
+                <div class="rname">
+
+                  ${esc(
+                    r.pekerjaan
+                  ) || '—'}
+
+                </div>
+
+
+                <div class="rloc">
+
+                  ${esc(
+                    r.lokasi ||
+                    r.ulp ||
+                    '—'
+                  )}
+
+                  ·
+
+                  ${esc(
+                    r.petugas
+                  ) || '—'}
+
+                </div>
+
+              </div>
+
+
+              <span
+                class="badge"
+                style="background:${colorFor(r.pekerjaan)}">
+
+                ${esc(
+                  r.pekerjaan
+                ) || '—'}
+
+              </span>
+
+            </div>
+
+          `)
+          .join('')
+
+      : '<div class="empty-mini">Tidak ada pekerjaan pada tanggal ini.</div>';
+
+}
+
+
+document
+  .getElementById(
+    'calPrev'
+  )
+  .addEventListener(
+    'click',
+    ()=>{
+
+      calCursor =
+        new Date(
+
+          calCursor.getFullYear(),
+
+          calCursor.getMonth() - 1,
+
+          1
+
+        );
+
+
+      renderCalendar();
+
+    }
+  );
+
+
+document
+  .getElementById(
+    'calNext'
+  )
+  .addEventListener(
+    'click',
+    ()=>{
+
+      calCursor =
+        new Date(
+
+          calCursor.getFullYear(),
+
+          calCursor.getMonth() + 1,
+
+          1
+
+        );
+
+
+      renderCalendar();
+
+    }
+  );
+
+
+/* =========================================================
+   FAQ
+   ========================================================= */
+
+const FAQ_ITEMS = [
+
+  {
+
+    q:
+      'Bagaimana cara memuat data ke dashboard?',
+
+    a:
+      'Buka ikon ⚙ (Sumber Data) di kanan atas, lalu pilih salah satu cara: unggah file spreadsheet, tempel URL CSV/Apps Script otomatis, atau tempel data CSV secara manual.'
+
+  },
+
+
+  {
+
+    q:
+      'Apakah data diperbarui otomatis?',
+
+    a:
+      'Ya, jika kamu menggunakan opsi "Sumber otomatis (live)" dengan URL CSV, dashboard akan menyegarkan data setiap 5 menit secara otomatis, dan juga bisa disegarkan manual lewat tombol "Segarkan sekarang".'
+
+  },
+
+
+  {
+
+    q:
+      'Ke mana data petugas dan profil disimpan?',
+
+    a:
+      'Data petugas dan profil admin disimpan langsung di browser (localStorage), bukan di spreadsheet. Artinya data ini khusus untuk perangkat/browser yang dipakai.'
+
+  },
+
+
+  {
+
+    q:
+      'Bagaimana dokumentasi pekerjaan ditampilkan?',
+
+    a:
+      'Jika kolom Dokumentasi pada spreadsheet berisi link gambar atau link Google Drive yang dapat diakses, sistem akan mencoba menampilkan gambar langsung pada menu Log Pekerjaan. Jika gambar tidak dapat dimuat, tersedia tombol Buka Dokumentasi.'
+
+  },
+
+
+  {
+
+    q:
+      'Bagaimana cara menambahkan koordinat di Peta Wilayah?',
+
+    a:
+      'Buka menu "Peta Wilayah", isi kolom Latitude dan Longitude pada baris lokasi yang sesuai, lalu data akan otomatis tersimpan di browser.'
+
+  },
+
+
+  {
+
+    q:
+      'Kenapa grafik terlihat kosong?',
+
+    a:
+      'Grafik akan kosong jika belum ada data yang dimuat, atau data yang dimuat tidak memiliki kolom Timestamp/Nama Pekerjaan yang valid. Periksa kembali format kolom di sumber data.'
+
+  }
+
+];
+
+
+function renderFaqView(){
+
+  const el =
+    document.getElementById(
+      'faqList'
+    );
+
+
+  el.innerHTML =
+    FAQ_ITEMS
+      .map(
+        (f,i)=>`
+
+          <div
+            class="faq-item"
+            data-i="${i}">
+
+            <div class="faq-q">
+
+              ${esc(f.q)}
+
+              <span>+</span>
+
+            </div>
+
+
+            <div class="faq-a">
+
+              ${esc(f.a)}
+
+            </div>
+
+          </div>
+
+        `
+      )
+      .join('');
+
+
+  el
+    .querySelectorAll(
+      '.faq-item'
+    )
+    .forEach(item=>{
+
+      item
+        .querySelector(
+          '.faq-q'
+        )
+        .addEventListener(
+          'click',
+          () =>
+            item
+              .classList
+              .toggle(
+                'open'
+              )
+        );
+
+    });
+
+}
+
+
+/* =========================================================
+   METRIK UNIT
+   ========================================================= */
+
+function renderMetrikUnitView(){
+
+  const counts = {};
+
+
+  rows.forEach(r=>{
+
+    if(r.ulp){
+
+      counts[r.ulp] =
+        (counts[r.ulp] || 0) + 1;
+
+    }
+
+  });
+
+
+  const entries =
+    Object.entries(counts)
+      .sort(
+        (a,b)=>
+          b[1] - a[1]
+      );
+
+
+  if(unitChart)
+    unitChart.destroy();
+
+
+  unitChart =
+    new Chart(
+      document.getElementById(
+        'unitChart'
+      ),
+      {
+
+        type:'bar',
+
+        data:{
+
+          labels:
+            entries.map(
+              e=>e[0]
+            ),
+
+          datasets:[{
+
+            label:
+              'Total Pekerjaan',
+
+            data:
+              entries.map(
+                e=>e[1]
+              ),
+
+            backgroundColor:
+              '#3fae8f'
+
+          }]
+
+        },
+
+        options:{
+
+          responsive:true,
+
+          plugins:{
+
+            legend:{
+              display:false
+            }
+
+          },
+
+          scales:{
+
+            x:{
+
+              grid:{
+                display:false
+              },
+
+              ticks:{
+
+                color:
+                  '#93a6c4',
+
+                font:{
+                  size:11
+                }
+
+              }
+
+            },
+
+            y:{
+
+              grid:{
+
+                color:
+                  '#233a5e'
+
+              },
+
+              ticks:{
+
+                color:
+                  '#93a6c4',
+
+                precision:0
+
+              },
+
+              beginAtZero:true
+
+            }
+
+          }
+
+        }
+
+      }
+    );
+
+
+  const tbody =
+    document.querySelector(
+      '#unitTable tbody'
+    );
+
+
+  tbody.innerHTML =
+
+    entries.length
+
+      ? entries
+          .map(
+            ([u,n])=>
+              `<tr>
+                <td>${esc(u)}</td>
+                <td>${n}</td>
+              </tr>`
+          )
+          .join('')
+
+      : '<tr><td colspan="2" class="empty-mini">Belum ada data.</td></tr>';
+
+}
+
+
+/* =========================================================
+   AKUMULASI
+   ========================================================= */
+
+function renderMetrikAkumulasiView(){
+
+  const sorted =
+    [...rows]
+      .filter(
+        r=>r._date
+      )
+      .sort(
+        (a,b)=>
+          a._date - b._date
+      );
+
+
+  const labels = [];
+
+  const data = [];
+
+  let running = 0;
+
+
+  sorted.forEach(r=>{
+
+    running++;
+
+
+    labels.push(
+      fmtDate(
+        r._date,
+        r.timestamp
+      )
+    );
+
+
+    data.push(
+      running
+    );
+
+  });
+
+
+  if(akumulasiChart)
+    akumulasiChart.destroy();
+
+
+  akumulasiChart =
+    new Chart(
+      document.getElementById(
+        'akumulasiChart'
+      ),
+      {
+
+        type:'line',
+
+        data:{
+
+          labels,
+
+          datasets:[{
+
+            label:
+              'Total Kumulatif',
+
+            data,
+
+            borderColor:
+              '#5aa4f5',
+
+            backgroundColor:
+              'rgba(90,164,245,.15)',
+
+            fill:true,
+
+            tension:.25,
+
+            pointRadius:0,
+
+            borderWidth:2
+
+          }]
+
+        },
+
+        options:{
+
+          responsive:true,
+
+          plugins:{
+
+            legend:{
+              display:false
+            }
+
+          },
+
+          scales:{
+
+            x:{
+
+              grid:{
+                display:false
+              },
+
+              ticks:{
+
+                color:
+                  '#93a6c4',
+
+                maxTicksLimit:8,
+
+                font:{
+                  size:10
+                }
+
+              }
+
+            },
+
+            y:{
+
+              grid:{
+
+                color:
+                  '#233a5e'
+
+              },
+
+              ticks:{
+
+                color:
+                  '#93a6c4',
+
+                precision:0
+
+              },
+
+              beginAtZero:true
+
+            }
+
+          }
+
+        }
+
+      }
+    );
+
+}
+
+
+/* =========================================================
+   PETA
+   ========================================================= */
+
+function loadWilayahCoords(){
+
+  try{
+
+    return JSON.parse(
+      localStorage.getItem(
+        STORAGE_WILAYAH_KEY
+      )
+    ) || {};
+
+  }catch(e){
+
+    return {};
+
+  }
+
+}
+
+
+function saveWilayahCoords(map){
+
+  localStorage.setItem(
+    STORAGE_WILAYAH_KEY,
+    JSON.stringify(map)
+  );
+
+}
+
+
+function renderMetrikPetaView(){
+
+  const counts = {};
+
+
+  rows.forEach(r=>{
+
+    const key =
+      r.ulp ||
+      r.lokasi;
+
+
+    if(key){
+
+      counts[key] =
+        (counts[key] || 0) + 1;
+
+    }
+
+  });
+
+
+  const coords =
+    loadWilayahCoords();
+
+
+  const entries =
+    Object.entries(counts)
+      .sort(
+        (a,b)=>
+          b[1] - a[1]
+      );
+
+
+  const tbody =
+    document.querySelector(
+      '#petaTable tbody'
+    );
+
+
+  if(!entries.length){
+
+    tbody.innerHTML =
+      '<tr><td colspan="5" class="empty-mini">Belum ada data wilayah.</td></tr>';
+
+    return;
+
+  }
+
+
+  tbody.innerHTML =
+    entries.map(
+      ([loc,n])=>{
+
+        const c =
+          coords[loc] || {};
+
+
+        return `
+
+          <tr
+            data-loc="${esc(loc)}">
+
+            <td>
+              ${esc(loc)}
+            </td>
+
+
+            <td>
+              ${n}
+            </td>
+
+
+            <td>
+
+              <input
+                type="text"
+                class="lat-input"
+                value="${esc(c.lat || '')}"
+                placeholder="-3.99">
+
+            </td>
+
+
+            <td>
+
+              <input
+                type="text"
+                class="lng-input"
+                value="${esc(c.lng || '')}"
+                placeholder="122.51">
+
+            </td>
+
+
+            <td>
+
+              <span
+                class="link-btn"
+                data-save-loc="${esc(loc)}">
+
+                Simpan
+
+              </span>
+
+            </td>
+
+          </tr>
+
+        `;
+
+      }
+    ).join('');
+
+
+  tbody
+    .querySelectorAll(
+      '[data-save-loc]'
+    )
+    .forEach(btn=>{
+
+      btn.addEventListener(
+        'click',
+        ()=>{
+
+          const loc =
+            btn.dataset.saveLoc;
+
+
+          const tr =
+            btn.closest(
+              'tr'
+            );
+
+
+          const lat =
+            tr
+              .querySelector(
+                '.lat-input'
+              )
+              .value
+              .trim();
+
+
+          const lng =
+            tr
+              .querySelector(
+                '.lng-input'
+              )
+              .value
+              .trim();
+
+
+          const map =
+            loadWilayahCoords();
+
+
+          map[loc] = {
+
+            lat,
+
+            lng
+
+          };
+
+
+          saveWilayahCoords(
+            map
+          );
+
+
+          btn.textContent =
+            'Tersimpan ✓';
+
+
+          setTimeout(
+            ()=>
+              btn.textContent =
+                'Simpan',
+            1200
+          );
+
+        }
+      );
+
+    });
+
+}
+
+
+/* =========================================================
+   MODAL DOKUMENTASI
+   ========================================================= */
+
+document
+  .getElementById(
+    'imageModalClose'
+  )
+  .addEventListener(
+    'click',
+    closeImageModal
+  );
+
+
+document
+  .getElementById(
+    'imageModal'
+  )
+  .addEventListener(
+    'click',
+    e=>{
+
+      if(
+        e.target.id ===
+        'imageModal'
+      ){
+
+        closeImageModal();
+
+      }
+
+    }
+  );
+
+
+document.addEventListener(
+  'keydown',
+  e=>{
+
+    if(
+      e.key === 'Escape'
+    ){
+
+      closeImageModal();
+
+    }
+
+  }
 );
-```
+
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+
+(function init(){
+
+  /*
+   * Theme
+   */
+
+  if(
+    localStorage.getItem(
+      STORAGE_THEME_KEY
+    ) === 'light'
+  ){
+
+    document.body
+      .classList
+      .add(
+        'theme-light'
+      );
+
+  }
+
+
+  /*
+   * Profile
+   */
+
+  applyProfileToSidebar();
+
+
+  /*
+   * Cache
+   */
+
+  const hadCache =
+    restoreRows();
+
+
+  if(hadCache){
+
+    assignCategoryColors();
+
+
+    setStatus(
+      `${rows.length} baris dimuat dari sesi sebelumnya.`,
+      'ok'
+    );
+
+  }
+
+
+  /*
+   * Render awal
+   */
+
+  renderAll();
+
+
+  /*
+   * URL default
+   */
+
+  if(
+
+    DEFAULT_SOURCE_URL &&
+
+    DEFAULT_SOURCE_URL !==
+      'TEMPEL_LINK_ANDA_DI_SINI'
+
+  ){
+
+    localStorage.setItem(
+      STORAGE_URL_KEY,
+      DEFAULT_SOURCE_URL
+    );
+
+
+    document
+      .getElementById(
+        'csvUrlInput'
+      )
+      .value =
+        DEFAULT_SOURCE_URL;
+
+
+    document
+      .getElementById(
+        'refreshBtn'
+      )
+      .style.display =
+        'inline-block';
+
+
+    setStatus(
+      'Mengambil data dari sumber…'
+    );
+
+
+    refreshFromSavedSource(
+      false
+    );
+
+
+    startAutoRefresh();
+
+
+    return;
+
+  }
+
+
+  /*
+   * URL tersimpan
+   */
+
+  const savedUrl =
+    localStorage.getItem(
+      STORAGE_URL_KEY
+    );
+
+
+  if(savedUrl){
+
+    document
+      .getElementById(
+        'csvUrlInput'
+      )
+      .value =
+        savedUrl;
+
+
+    document
+      .getElementById(
+        'refreshBtn'
+      )
+      .style.display =
+        'inline-block';
+
+
+    refreshFromSavedSource(
+      false
+    );
+
+
+    startAutoRefresh();
+
+  }else if(!hadCache){
+
+    openDrawer();
+
+  }
+
+})();
