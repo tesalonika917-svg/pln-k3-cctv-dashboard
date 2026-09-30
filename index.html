@@ -1,39 +1,60 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>PLN - CCTV Monitoring UID SSTB</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <link rel="stylesheet" href="style.css">
+    <title>
+        Logsheet Monitoring CCTV Online UID SSTB
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
 </head>
 
 <body>
 
 <div class="app">
 
-    <!-- ================= SIDEBAR ================= -->
-    <aside class="sidebar" id="sidebar">
+    <!-- ======================================
+         SIDEBAR
+    ======================================= -->
 
-        <div class="sidebar-header">
+    <aside
+        class="sidebar"
+        id="sidebar"
+    >
 
-            <div class="brand">
-                <div class="brand-logo">PLN</div>
+        <div class="brand">
 
-                <div class="brand-text">
-                    <strong>CCTV Monitoring</strong>
-                    <span>UID SSTB</span>
-                </div>
+            <div class="brand-logo">
+                <img src="LogoPLN.jpg" alt="Logo PLN" class="brand-logo-img">
             </div>
 
-            <button class="sidebar-toggle" id="sidebarToggle">
-                ☰
-            </button>
+            <div class="brand-text">
+
+                <strong>
+                    CCTV Monitoring
+                </strong>
+
+                <span>
+                    UID SSTB
+                </span>
+
+            </div>
 
         </div>
 
-        <!-- PROFILE -->
+
         <div class="profile">
 
             <div class="avatar">
@@ -41,115 +62,146 @@
             </div>
 
             <div>
-                <strong>Admin</strong>
-                <span>Monitoring CCTV</span>
+
+                <strong>
+                    Admin
+                </strong>
+
+                <span>
+                    Monitoring CCTV
+                </span>
+
             </div>
 
         </div>
 
-        <!-- MENU -->
-        <nav class="nav">
 
-            <div class="nav-title">
+        <nav class="navigation">
+
+            <div class="nav-section">
                 Menu Utama
             </div>
 
-            <a href="#" class="nav-link active" data-view="dashboard">
-                <span>⌂</span>
-                Dashboard
-            </a>
-
-            <a href="#" class="nav-link" data-view="monitoring">
+            <a
+                href="#"
+                class="nav-link active"
+                data-view="dashboard"
+            >
                 <span>▣</span>
-                Monitoring Harian
+                <span>Dashboard</span>
             </a>
 
-            <a href="#" class="nav-link" data-view="laporan">
+            <a
+                href="#"
+                class="nav-link"
+                data-view="monitoring"
+            >
+                <span>◉</span>
+                <span>Monitoring Harian</span>
+            </a>
+
+            <a
+                href="#"
+                class="nav-link"
+                data-view="laporan"
+            >
                 <span>▤</span>
-                Data Laporan
+                <span>Data Laporan</span>
             </a>
 
-            <a href="#" class="nav-link" data-view="grafik">
-                <span>◔</span>
-                Visualisasi Grafik
+            <a
+                href="#"
+                class="nav-link"
+                data-view="grafik"
+            >
+                <span>▥</span>
+                <span>Visualisasi Grafik</span>
             </a>
 
 
-            <div class="nav-title">
+            <div class="nav-section">
                 Lainnya
             </div>
 
-            <a href="#" class="nav-link" data-view="panduan">
+            <a
+                href="#"
+                class="nav-link"
+                data-view="panduan"
+            >
                 <span>?</span>
-                Panduan
+                <span>Panduan</span>
             </a>
 
-        </nav>
 
-
-        <!-- STATUS SISTEM -->
-        <div class="system-status">
-
-            <div class="nav-title">
+            <div class="nav-section">
                 Status Sistem
             </div>
 
-            <div class="status-item">
+            <div class="system-status">
 
-                <div>
-                    <span class="status-label">
+                <div class="status-row">
+
+                    <span>
                         Data Aktif
                     </span>
 
                     <strong id="dataActive">
                         0
                     </strong>
+
                 </div>
 
-            </div>
+                <div class="status-row">
 
-
-            <div class="status-item">
-
-                <div>
-                    <span class="status-label">
+                    <span>
                         Status Data
                     </span>
 
-                    <strong class="status-connected" id="dataStatus">
-                        Belum terhubung
+                    <strong
+                        class="status-connected"
+                        id="dataStatus"
+                    >
+                        Terhubung
                     </strong>
+
                 </div>
 
             </div>
 
-        </div>
+        </nav>
 
     </aside>
 
 
-    <!-- ================= MAIN ================= -->
-    <div class="main">
+    <!-- ======================================
+         MAIN
+    ======================================= -->
+
+    <main class="main">
 
         <!-- TOPBAR -->
+
         <header class="topbar">
 
-            <div class="topbar-left">
+            <button
+                class="icon-btn"
+                id="mobileMenu"
+                title="Menu"
+            >
+                ☰
+            </button>
 
-                <button class="mobile-menu" id="mobileMenu">
-                    ☰
-                </button>
-
-                <h2 id="topbarTitle">
-                    Dashboard
-                </h2>
-
+            <div class="topbar-title">
+                Dashboard
             </div>
 
-
-            <div class="topbar-right">
+            <div class="topbar-actions">
 
                 <div class="search-box">
+
+                    <span>
+                        🔍
+                    </span>
 
                     <input
                         type="text"
@@ -157,26 +209,20 @@
                         placeholder="Cari data..."
                     >
 
-                    <span>
-                        🔍
-                    </span>
-
                 </div>
 
-
                 <button
-                    class="top-icon"
+                    class="icon-btn"
                     id="themeToggle"
-                    title="Ganti tema"
+                    title="Tema"
                 >
                     ☾
                 </button>
 
-
                 <button
-                    class="top-icon"
+                    class="icon-btn"
                     id="settingsBtn"
-                    title="Sumber data"
+                    title="Pengaturan"
                 >
                     ⚙
                 </button>
@@ -186,680 +232,970 @@
         </header>
 
 
-        <!-- ================= CONTENT ================= -->
-        <main class="content">
+        <!-- ======================================
+             DASHBOARD
+        ======================================= -->
+
+        <section
+            class="view active"
+            id="view-dashboard"
+        >
+
+            <div class="page-header">
+
+                <div>
+
+                    <h1>
+                        Dashboard
+                    </h1>
+
+                    <p>
+                        Logsheet Monitoring CCTV Online UID SSTB
+                    </p>
+
+                </div>
+
+                <button
+                    class="btn btn-primary"
+                    id="refreshBtnMain"
+                >
+                    ↻ Refresh
+                </button>
+
+            </div>
 
 
-            <!-- ================= DASHBOARD ================= -->
-            <section
-                class="view active"
-                id="view-dashboard"
-            >
+            <div class="kpi-grid">
 
-                <div class="page-header">
+                <div class="kpi-card kpi-card--hero">
+
+                    <div class="kpi-icon">
+                        ▤
+                    </div>
 
                     <div>
 
-                        <h1>
-                            Dashboard
-                        </h1>
+                        <span>
+                            Total Laporan
+                        </span>
 
-                        <p>
-                            Logsheet Monitoring CCTV Online UID SSTB
-                        </p>
-
-                    </div>
-
-
-                    <button
-                        class="btn btn-primary"
-                        id="refreshBtnMain"
-                    >
-                        ↻ Refresh
-                    </button>
-
-                </div>
-
-
-                <!-- KPI -->
-                <div class="kpi-grid">
-
-                    <div class="kpi-card">
-
-                        <div class="kpi-icon">
-                            📊
-                        </div>
-
-                        <div>
-
-                            <span>
-                                Total Data
-                            </span>
-
-                            <strong id="totalData">
-                                0
-                            </strong>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="kpi-card">
-
-                        <div class="kpi-icon">
-                            📅
-                        </div>
-
-                        <div>
-
-                            <span>
-                                Hari Ini
-                            </span>
-
-                            <strong id="todayData">
-                                0
-                            </strong>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="kpi-card">
-
-                        <div class="kpi-icon">
-                            📹
-                        </div>
-
-                        <div>
-
-                            <span>
-                                CCTV
-                            </span>
-
-                            <strong id="totalCctv">
-                                0
-                            </strong>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="kpi-card">
-
-                        <div class="kpi-icon">
-                            🏢
-                        </div>
-
-                        <div>
-
-                            <span>
-                                Unit
-                            </span>
-
-                            <strong id="totalUnit">
-                                0
-                            </strong>
-
-                        </div>
+                        <strong id="totalData">
+                            0
+                        </strong>
 
                     </div>
 
                 </div>
 
 
-                <!-- AKTIVITAS -->
-                <div class="panel">
+                <div class="kpi-card">
+
+                    <div class="kpi-icon">
+                        ◷
+                    </div>
+
+                    <div>
+
+                        <span>
+                            Laporan Hari Ini
+                        </span>
+
+                        <strong id="todayData">
+                            0
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="kpi-card">
+
+                    <div class="kpi-icon">
+                        ◉
+                    </div>
+
+                    <div>
+
+                        <span>
+                        Jumlah Perangkat CCTV
+                        </span>
+
+                        <strong id="totalCctv">
+                            
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="kpi-card">
+
+                    <div class="kpi-icon">
+                        ▦
+                    </div>
+
+                    <div>
+
+                        <span>
+                            Unit
+                        </span>
+
+                        <strong id="totalUnit">
+                            
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="kpi-card kpi-card--on">
+
+                    <div class="kpi-icon">
+                        ✓
+                    </div>
+
+                    <div>
+
+                        <span>
+                            CCTV ON
+                        </span>
+
+                        <strong id="cctvOn">
+                            0
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="kpi-card kpi-card--off">
+
+                    <div class="kpi-icon">
+                        ✕
+                    </div>
+
+                    <div>
+
+                        <span>
+                            CCTV OFF
+                        </span>
+
+                        <strong id="cctvOff">
+                            0
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- GRAFIK BATANG & DONAT DASHBOARD -->
+
+            <div class="chart-grid">
+
+                <div class="panel chart-box">
 
                     <div class="panel-header">
 
                         <div>
 
                             <h2>
-                                Aktivitas Terbaru
+                                Pekerjaan per ULP
                             </h2>
 
                             <p>
-                                Data monitoring CCTV terbaru.
+                                Distribusi pekerjaan berdasarkan ULP.
                             </p>
 
                         </div>
 
-
-                        <button
-                            class="link-btn"
-                            data-view-link="laporan"
-                        >
-                            Lihat Semua
-                        </button>
-
                     </div>
 
+                    <div class="chart-container">
 
-                    <div
-                        class="activity-list"
-                        id="recentList"
-                    >
-
-                        <div class="empty-state">
-                            Belum ada data.
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-
-            <!-- ================= MONITORING ================= -->
-            <section
-                class="view"
-                id="view-monitoring"
-            >
-
-                <div class="page-header">
-
-                    <div>
-
-                        <h1>
-                            Monitoring Harian
-                        </h1>
-
-                        <p>
-                            Data monitoring CCTV berdasarkan waktu pencatatan.
-                        </p>
+                        <canvas id="dashboardUnitChart"></canvas>
 
                     </div>
 
                 </div>
 
 
-                <div class="panel">
+                <div class="panel chart-box">
 
                     <div class="panel-header">
 
                         <div>
 
                             <h2>
-                                Data Monitoring CCTV
+                                Pekerjaan per UP3
                             </h2>
+
+                            <p>
+                                Distribusi pekerjaan berdasarkan UP3.
+                            </p>
 
                         </div>
 
+                    </div>
+
+                    <div class="chart-container chart-doughnut">
+
+                        <canvas id="dashboardUp3Chart"></canvas>
+
+                    </div>
+
+                    <div class="up3-recap-list" id="dashboardUp3RecapList"></div>
+
+                </div>
+
+            </div>
+
+
+            <div class="panel">
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <h2>
+                            Aktivitas Terbaru
+                        </h2>
+
+                        <p>
+                            Data monitoring CCTV terbaru.
+                        </p>
+
+                    </div>
+
+                    <button
+                        class="text-btn"
+                        data-view-target="laporan"
+                    >
+                        Lihat Semua
+                    </button>
+
+                </div>
+
+                <div
+                    class="activity-list"
+                    id="recentList"
+                >
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ======================================
+             MONITORING HARIAN
+        ======================================= -->
+
+        <section
+            class="view"
+            id="view-monitoring"
+        >
+
+            <div class="page-header">
+
+                <div>
+
+                    <h1>
+                        Monitoring Harian
+                    </h1>
+
+                    <p>
+                        Monitoring pekerjaan CCTV berdasarkan data Spreadsheet.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="panel">
+
+                <div class="toolbar">
+
+                    <div class="search-box">
+
+                        <span>
+                            🔍
+                        </span>
+
                         <input
-                            class="table-search"
-                            id="monitoringSearch"
                             type="text"
+                            id="monitoringSearch"
                             placeholder="Cari monitoring..."
                         >
 
                     </div>
 
+                </div>
 
-                    <div class="table-container">
 
-                        <table class="data-table">
+                <div class="table-wrapper">
 
-                            <thead>
+                    <table>
 
-                                <tr>
+                        <thead>
 
-                                    <th>No</th>
-                                    <th>Tanggal & Waktu</th>
-                                    <th>UP3</th>
-                                    <th>ULP</th>
-                                    <th>Perangkat</th>
-                                    <th>Pekerjaan</th>
-                                    <th>Lokasi</th>
-                                    <th>Petugas</th>
+                        <tr>
 
-                                </tr>
+                            <th>No</th>
 
-                            </thead>
+                            <th>
+                                Tanggal & Waktu
+                            </th>
 
-                            <tbody id="monitoringTable">
-                            </tbody>
+                            <th>
+                                UP3
+                            </th>
 
-                        </table>
+                            <th>
+                                ULP
+                            </th>
 
+                            <th>
+                                Perangkat
+                            </th>
+
+                            <th>
+                                Pekerjaan
+                            </th>
+
+                            <th>
+                                Lokasi
+                            </th>
+
+                            <th>
+                                Petugas
+                            </th>
+
+                        </tr>
+
+                        </thead>
+
+                        <tbody
+                            id="monitoringTable"
+                        >
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ======================================
+             DATA LAPORAN
+        ======================================= -->
+
+        <section
+            class="view"
+            id="view-laporan"
+        >
+
+            <div class="page-header">
+
+                <div>
+
+                    <h1>
+                        Data Laporan
+                    </h1>
+
+                    <p>
+                        Seluruh data logsheet monitoring CCTV.
+                    </p>
+
+                </div>
+
+                <div class="header-actions">
+
+                    <button
+                        class="btn btn-secondary"
+                        id="settingsBtnLaporan"
+                    >
+                        ⚙ Pengaturan
+                    </button>
+
+                    <button
+                        class="btn btn-primary"
+                        id="exportBtn"
+                    >
+                        ↓ Export CSV
+                    </button>
+
+                    <button
+                        class="btn btn-primary"
+                        id="viewPdfBtn"
+                    >
+                        📄 Lihat PDF
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="panel">
+
+                <div class="toolbar">
+
+                    <div class="search-box">
+
+                        <span>
+                            🔍
+                        </span>
+
+                        <input
+                            type="text"
+                            id="laporanSearch"
+                            placeholder="Cari laporan..."
+                        >
+
+                    </div>
+
+                    <div
+                        class="result-count"
+                        id="resultCount"
+                    >
+                        0 data
                     </div>
 
                 </div>
 
-            </section>
 
+                <div class="table-wrapper">
 
-            <!-- ================= DATA LAPORAN ================= -->
-            <section
-                class="view"
-                id="view-laporan"
-            >
+                    <table class="report-table">
 
-                <div class="page-header">
+                        <thead>
 
-                    <div>
+                        <tr>
 
-                        <h1>
-                            Data Laporan
-                        </h1>
+                            <th>
+                                No
+                            </th>
 
-                        <p>
-                            Seluruh data laporan monitoring CCTV UID SSTB.
-                        </p>
+                            <th>
+                                Tanggal & Waktu
+                            </th>
 
-                    </div>
+                            <th>
+                                UP3
+                            </th>
 
+                            <th>
+                                ULP
+                            </th>
 
-                    <div class="page-actions">
+                            <th>
+                                Perangkat
+                            </th>
 
-                        <button
-                            class="btn btn-primary"
-                            id="settingsBtnLaporan"
+                            <th>
+                                Pekerjaan
+                            </th>
+
+                            <th>
+                                Lokasi
+                            </th>
+
+                            <th>
+                                Petugas
+                            </th>
+
+                            <th>
+                                Dokumentasi CCTV
+                            </th>
+
+                           
+                            <th>
+                                Aksi
+                            </th>
+
+                        </tr>
+
+                        </thead>
+
+                        <tbody
+                            id="laporanTable"
                         >
-                            ⚙ Sumber Data
-                        </button>
+                        </tbody>
 
-                        <button
-                            class="btn btn-secondary"
-                            id="exportBtn"
-                        >
-                            ↓ Export CSV
-                        </button>
-
-                    </div>
+                    </table>
 
                 </div>
 
+            </div>
 
-                <div class="panel">
+        </section>
+
+
+        <!-- ======================================
+             GRAFIK
+        ======================================= -->
+
+        <section
+            class="view"
+            id="view-grafik"
+        >
+
+            <div class="page-header">
+
+                <div>
+
+                    <h1>
+                        Visualisasi Grafik
+                    </h1>
+
+                    <p>
+                        Visualisasi pekerjaan berdasarkan data Spreadsheet.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="chart-grid">
+
+
+                <!-- PEKERJAAN PER HARI -->
+
+                <div class="panel chart-box">
 
                     <div class="panel-header">
 
                         <div>
 
                             <h2>
-                                Data Laporan CCTV
+                                Pekerjaan per Hari
                             </h2>
 
                             <p>
-                                Data diambil langsung dari Google Spreadsheet.
+                                Jumlah pekerjaan berdasarkan tanggal
+                                pada bulan yang dipilih.
                             </p>
 
                         </div>
 
+                        <div class="chart-filter">
 
-                        <input
-                            class="table-search"
-                            id="laporanSearch"
-                            type="text"
-                            placeholder="Cari laporan..."
-                        >
+                            <label for="dailyChartMonth">
+                                Bulan
+                            </label>
+
+                            <input
+                                type="month"
+                                id="dailyChartMonth"
+                            >
+
+                        </div>
 
                     </div>
 
+                    <div class="chart-container">
 
-                    <div class="table-container">
-
-                        <table class="data-table">
-
-                            <thead>
-
-                                <tr>
-
-                                    <th>No</th>
-                                    <th>Tanggal & Waktu</th>
-                                    <th>UP3</th>
-                                    <th>ULP</th>
-                                    <th>Perangkat</th>
-                                    <th>Pekerjaan</th>
-                                    <th>Lokasi</th>
-                                    <th>Petugas</th>
-                                    <th>Dokumentasi</th>
-
-                                </tr>
-
-                            </thead>
-
-                            <tbody id="laporanTable">
-                            </tbody>
-
-                        </table>
+                        <canvas id="dailyChart"></canvas>
 
                     </div>
 
                 </div>
 
-            </section>
+
+                <!-- PEKERJAAN PER BULAN -->
+
+                <div class="panel chart-box">
+
+                    <div class="panel-header">
+
+                        <div>
+
+                            <h2>
+                                Pekerjaan per Bulan
+                            </h2>
+
+                            <p>
+                                Jumlah pekerjaan berdasarkan bulan
+                                pada rentang yang dipilih.
+                            </p>
+
+                        </div>
+
+                        <div class="chart-filter chart-filter-range">
+
+                            <label for="monthlyChartFrom">
+                                Dari
+                            </label>
+
+                            <input
+                                type="month"
+                                id="monthlyChartFrom"
+                            >
+
+                            <label for="monthlyChartTo">
+                                Sampai
+                            </label>
+
+                            <input
+                                type="month"
+                                id="monthlyChartTo"
+                            >
+
+                        </div>
+
+                    </div>
+
+                    <div class="chart-container">
+
+                        <canvas id="lineChart"></canvas>
+
+                    </div>
+
+                </div>
 
 
-            <!-- ================= GRAFIK ================= -->
-            <section
-    class="view"
-    id="view-grafik"
+                <!-- PEKERJAAN PER ULP -->
+
+                <div class="panel chart-box">
+
+                    <div class="panel-header">
+
+                        <div>
+
+                            <h2>
+                                Pekerjaan per ULP
+                            </h2>
+
+                            <p>
+                                Distribusi pekerjaan berdasarkan ULP.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                    <div class="chart-container">
+
+                        <canvas id="unitChart"></canvas>
+
+                    </div>
+
+                </div>
+
+
+                <!-- PEKERJAAN PER UP3 -->
+
+                <div class="panel chart-box">
+
+                    <div class="panel-header">
+
+                        <div>
+
+                            <h2>
+                                Pekerjaan per UP3
+                            </h2>
+
+                            <p>
+                                Distribusi pekerjaan berdasarkan UP3.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                    <div class="chart-container chart-doughnut">
+
+                        <canvas id="up3Chart"></canvas>
+
+                    </div>
+
+                    <div class="up3-recap-list" id="up3RecapList"></div>
+
+                </div>
+
+
+                <!-- PERANGKAT CCTV -->
+
+                <div class="panel chart-box">
+
+                    <div class="panel-header">
+
+                        <div>
+
+                            <h2>
+                                Perangkat CCTV
+                            </h2>
+
+                            <p>
+                                Jumlah laporan berdasarkan perangkat CCTV.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                    <div class="chart-container">
+
+                        <canvas id="deviceChart"></canvas>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        </section>
+
+
+        <!-- ======================================
+             PANDUAN
+        ======================================= -->
+
+        <section
+            class="view"
+            id="view-panduan"
+        >
+
+            <div class="page-header">
+
+                <div>
+
+                    <h1>
+                        Panduan
+                    </h1>
+
+                    <p>
+                        Panduan penggunaan Logsheet Monitoring CCTV Online UID SSTB.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="guide-grid">
+
+                <div class="panel guide-card">
+
+                    <h2>
+                        Dashboard
+                    </h2>
+
+                    <p>
+                        Dashboard menampilkan ringkasan jumlah data,
+                        data hari ini, jumlah CCTV, jumlah unit dan
+                        aktivitas monitoring terbaru.
+                    </p>
+
+                </div>
+
+
+                <div class="panel guide-card">
+
+                    <h2>
+                        Monitoring Harian
+                    </h2>
+
+                    <p>
+                        Menu ini digunakan untuk melihat pekerjaan
+                        monitoring CCTV berdasarkan tanggal, UP3,
+                        ULP, perangkat, lokasi dan petugas.
+                    </p>
+
+                </div>
+
+
+                <div class="panel guide-card">
+
+                    <h2>
+                        Data Laporan
+                    </h2>
+
+                    <p>
+                        Menu Data Laporan menampilkan seluruh data
+                        dari Spreadsheet. Tombol Edit digunakan untuk
+                        menambahkan atau mengubah informasi temuan.
+                        Tombol PDF ULP membuat rekap laporan harian
+                        khusus untuk ULP terkait.
+                    </p>
+
+                </div>
+
+
+                <div class="panel guide-card">
+
+                    <h2>
+                        Edit Temuan
+                    </h2>
+
+                    <p>
+                        Data yang dapat diedit adalah Deskripsi Temuan,
+                        Waktu Temuan, Dokumentasi Temuan, Tindak Lanjut
+                        dan Keterangan.
+                    </p>
+
+                </div>
+
+
+                <div class="panel guide-card">
+
+                    <h2>
+                        Visualisasi Grafik
+                    </h2>
+
+                    <p>
+                        Grafik dibuat secara otomatis berdasarkan
+                        data yang terdapat pada Google Spreadsheet.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<!-- ======================================
+     DRAWER PENGATURAN
+======================================= -->
+
+<div
+    class="drawer-overlay"
+    id="drawerOverlay"
 >
 
-    <div class="page-header">
-
-        <div>
-
-            <h1>
-                Visualisasi Grafik
-            </h1>
-
-            <p>
-                Visualisasi data pekerjaan monitoring CCTV UID SSTB.
-            </p>
-
-        </div>
-
-    </div>
-
-
-    <div class="chart-grid">
-
-        <!-- GRAFIK 1 -->
-        <div class="panel">
-
-            <div class="panel-header">
-
-                <div>
-
-                    <h2>
-                        Pekerjaan per Bulan
-                    </h2>
-
-                    <p>
-                        Jumlah pekerjaan berdasarkan bulan.
-                    </p>
-
-                </div>
-
-            </div>
-
-            <div class="chart-box">
-
-                <canvas id="lineChart"></canvas>
-
-            </div>
-
-        </div>
-
-
-        <!-- GRAFIK 2 -->
-        <div class="panel">
-
-            <div class="panel-header">
-
-                <div>
-
-                    <h2>
-                        Pekerjaan per ULP
-                    </h2>
-
-                    <p>
-                        Jumlah pekerjaan pada setiap ULP.
-                    </p>
-
-                </div>
-
-            </div>
-
-            <div class="chart-box">
-
-                <canvas id="unitChart"></canvas>
-
-            </div>
-
-        </div>
-
-
-        <!-- GRAFIK 3 -->
-        <div class="panel">
-
-            <div class="panel-header">
-
-                <div>
-
-                    <h2>
-                        Distribusi Pekerjaan per UP3
-                    </h2>
-
-                    <p>
-                        Perbandingan jumlah pekerjaan setiap UP3.
-                    </p>
-
-                </div>
-
-            </div>
-
-            <div class="chart-box chart-doughnut">
-
-                <canvas id="up3Chart"></canvas>
-
-            </div>
-
-        </div>
-
-
-        <!-- GRAFIK 4 -->
-        <div class="panel">
-
-            <div class="panel-header">
-
-                <div>
-
-                    <h2>
-                        Jenis Pekerjaan
-                    </h2>
-
-                    <p>
-                        Distribusi berdasarkan nama pekerjaan.
-                    </p>
-
-                </div>
-
-            </div>
-
-            <div class="chart-box">
-
-                <canvas id="jobChart"></canvas>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</section>
-            <!-- ================= PANDUAN ================= -->
-            <section
-                class="view"
-                id="view-panduan"
-            >
-
-                <div class="page-header">
-
-                    <div>
-
-                        <h1>
-                            Panduan
-                        </h1>
-
-                        <p>
-                            Panduan penggunaan Logsheet Monitoring CCTV.
-                        </p>
-
-                    </div>
-
-                </div>
-
-
-                <div class="panel guide">
-
-                    <h2>
-                        Cara Menggunakan Dashboard
-                    </h2>
-
-                    <ol>
-
-                        <li>
-                            Buka menu <strong>Dashboard</strong> untuk melihat ringkasan data.
-                        </li>
-
-                        <li>
-                            Buka <strong>Monitoring Harian</strong> untuk melihat data monitoring berdasarkan waktu.
-                        </li>
-
-                        <li>
-                            Buka <strong>Data Laporan</strong> untuk melihat seluruh data laporan CCTV.
-                        </li>
-
-                        <li>
-                            Gunakan kolom pencarian untuk mencari pekerjaan, CCTV, lokasi, UP3, ULP atau petugas.
-                        </li>
-
-                        <li>
-                            Gunakan tombol <strong>Export CSV</strong> untuk mengunduh data.
-                        </li>
-
-                        <li>
-                            Gunakan tombol <strong>⚙ Sumber Data</strong> untuk memuat atau memperbarui data Spreadsheet.
-                        </li>
-
-                    </ol>
-
-                </div>
-
-            </section>
-
-        </main>
-
-    </div>
-
-
-    <!-- ================= DRAWER DATA ================= -->
-
-    <div
-        class="drawer-overlay"
-        id="drawerOverlay"
-    ></div>
-
-
     <aside
-        class="data-drawer"
+        class="drawer"
         id="dataDrawer"
     >
 
         <div class="drawer-header">
 
-            <h2>
-                Sumber Data
-            </h2>
+            <div>
+
+                <h2>
+                    Pengaturan Data
+                </h2>
+
+                <p>
+                    Hubungkan website dengan sumber data.
+                </p>
+
+            </div>
 
             <button
-                class="top-icon"
+                class="icon-btn"
                 id="closeDrawer"
             >
-                ✕
+                ×
             </button>
 
         </div>
 
 
-        <div
-            class="drawer-status"
-            id="statusMsg"
-        >
-            Belum ada data dimuat.
-        </div>
+        <div class="drawer-body">
 
+            <div class="form-group">
 
-        <div class="drawer-section">
+                <label>
+                    URL Google Sheets CSV
+                </label>
 
-            <h3>
-                Sumber Otomatis
-            </h3>
+                <input
+                    type="text"
+                    id="csvUrlInput"
+                >
 
-            <p>
-                Data diambil dari Google Spreadsheet melalui URL CSV.
-            </p>
+            </div>
 
-            <input
-                type="url"
-                id="csvUrlInput"
-                placeholder="URL Google Spreadsheet CSV"
-            >
 
             <button
-                class="btn btn-primary full-btn"
+                class="btn btn-primary full"
                 id="loadUrlBtn"
             >
-                Muat Data
+                Hubungkan Spreadsheet
             </button>
 
-            <button
-                class="btn btn-secondary full-btn"
-                id="refreshBtn"
+
+            <hr>
+
+
+            <div
+                class="status-message"
+                id="statusMsg"
             >
-                ↻ Segarkan
-            </button>
-
-        </div>
+                Menunggu koneksi...
+            </div>
 
 
-        <div class="drawer-section">
+            <div class="form-group">
 
-            <h3>
-                Upload CSV / Excel
-            </h3>
+                <label>
+                    Upload CSV / XLSX
+                </label>
 
-            <input
-                type="file"
-                id="fileInput"
-                accept=".csv,.xlsx,.xls"
-            >
+                <input
+                    type="file"
+                    id="fileInput"
+                    accept=".csv,.xlsx,.xls"
+                >
 
-        </div>
+            </div>
 
 
-        <div class="drawer-section">
+            <div class="form-group">
 
-            <h3>
-                Tempel CSV
-            </h3>
+                <label>
+                    Tempel CSV
+                </label>
 
-            <textarea
-                id="csvPasteInput"
-                placeholder="Timestamp,Unit UP3,Unit ULP,..."
-            ></textarea>
+                <textarea
+                    id="csvPasteInput"
+                    rows="7"
+                    placeholder="Tempel data CSV di sini..."
+                ></textarea>
+
+            </div>
+
 
             <button
-                class="btn btn-primary full-btn"
+                class="btn btn-secondary full"
                 id="loadPasteBtn"
             >
-                Muat Data
+                Baca CSV
             </button>
 
-        </div>
-
-
-        <div class="drawer-footer">
 
             <button
-                class="btn btn-secondary"
+                class="btn btn-secondary full"
                 id="sampleBtn"
             >
-                Data Contoh
+                Gunakan Data Contoh
             </button>
 
+
             <button
-                class="btn btn-danger"
+                class="btn btn-danger full"
                 id="clearBtn"
             >
-                Hapus Data
+                Hapus Data Lokal
             </button>
 
         </div>
@@ -869,14 +1205,344 @@
 </div>
 
 
+<!-- ======================================
+     MODAL EDIT
+======================================= -->
+
+<!-- ======================================
+     MODAL EDIT DATA TEMUAN
+======================================= -->
+
+<div
+    class="modal-overlay"
+    id="editModal"
+>
+
+    <div class="edit-modal">
+
+        <div class="modal-header">
+
+            <div>
+
+                <h2>
+                    Edit Data Temuan
+                </h2>
+
+                <p>
+                    Lengkapi informasi temuan monitoring CCTV.
+                </p>
+
+            </div>
+
+            <button
+                class="icon-btn"
+                id="closeEditModal"
+                type="button"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div class="modal-body">
+
+            <!-- DATA REFERENSI -->
+
+            <div class="edit-reference">
+
+                <div>
+
+                    <span>
+                        Pekerjaan
+                    </span>
+
+                    <strong id="editJob">
+                        -
+                    </strong>
+
+                </div>
+
+                <div>
+
+                    <span>
+                        Lokasi
+                    </span>
+
+                    <strong id="editLocation">
+                        -
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <form id="editForm">
+
+                <!-- NOMOR BARIS -->
+
+                <input
+                    type="hidden"
+                    id="editRowNumber"
+                >
+
+
+                <!-- =================================
+                     DESKRIPSI TEMUAN
+                ================================== -->
+
+                <div class="form-group">
+
+                    <label for="editDescription">
+                        Deskripsi Temuan (Jika Ada)
+                    </label>
+
+                    <textarea
+                        id="editDescription"
+                        rows="4"
+                        placeholder="Masukkan deskripsi temuan jika ada..."
+                    ></textarea>
+
+                </div>
+
+
+                <!-- =================================
+                     WAKTU TEMUAN
+                ================================== -->
+
+                <div class="form-group">
+
+                    <label for="editFindingTime">
+                        Waktu Temuan
+                    </label>
+
+                    <input
+                        type="datetime-local"
+                        id="editFindingTime"
+                    >
+
+                </div>
+
+
+                <!-- =================================
+                     TINDAK LANJUT
+                ================================== -->
+
+                <div class="form-group">
+
+                    <label for="editFollowUp">
+                        Tindak Lanjut
+                    </label>
+
+                    <select id="editFollowUp">
+
+                        <option value="">
+                            -- Pilih Tindak Lanjut --
+                        </option>
+
+                        <option value="Tegur Online">
+                            Tegur Online
+                        </option>
+
+                        <option value="CMC">
+                            CMC
+                        </option>
+
+                        <option value="Perbaikan">
+                            Perbaikan
+                        </option>
+
+                        <option value="Monitoring Lanjutan">
+                            Monitoring Lanjutan
+                        </option>
+
+                        <option value="Koordinasi">
+                            Koordinasi
+                        </option>
+
+                        <option value="Eskalasi">
+                            Eskalasi
+                        </option>
+
+                        <option value="Selesai">
+                            Selesai
+                        </option>
+
+                        <option value="Lainnya">
+                            Lainnya
+                        </option>
+
+                    </select>
+
+                </div>
+
+<div class="form-group">
+    <label for="editFindingDocumentation">
+        Dokumentasi Temuan
+    </label>
+
+    <input
+        type="url"
+        id="editFindingDocumentation"
+        placeholder="Masukkan link dokumentasi temuan..."
+    >
+</div>
+                <!-- =================================
+                     KETERANGAN
+                ================================== -->
+
+                <div class="form-group">
+
+                    <label for="editInformation">
+                        Keterangan
+                    </label>
+
+                    <textarea
+                        id="editInformation"
+                        rows="4"
+                        placeholder="Masukkan keterangan..."
+                    ></textarea>
+
+                </div>
+
+
+                <!-- =================================
+                     TOMBOL
+                ================================== -->
+
+                <div class="modal-actions">
+
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        id="cancelEditBtn"
+                    >
+                        Batal
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                        id="saveEditBtn"
+                    >
+                        Simpan Perubahan
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ======================================
+     MODAL LIHAT PDF — DATA LAPORAN
+======================================= -->
+
+<div
+    class="modal-overlay"
+    id="pdfModal"
+>
+
+    <div class="edit-modal pdf-modal">
+
+        <div class="modal-header">
+
+            <div>
+
+                <h2 id="pdfModalTitle">
+                    Rekap Laporan Harian (PDF)
+                </h2>
+
+                <p id="pdfModalDesc">
+                    Direkap per tanggal — ULP yang sudah melapor pada hari itu.
+                </p>
+
+            </div>
+
+            <button
+                class="icon-btn"
+                id="closePdfModal"
+                type="button"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div class="modal-body pdf-modal-body">
+
+            <div
+                class="pdf-status"
+                id="pdfStatus"
+            >
+                Menyiapkan PDF...
+            </div>
+
+            <iframe
+                id="pdfPreviewFrame"
+                class="pdf-preview-frame"
+                title="Preview PDF Rekap Laporan Harian"
+            ></iframe>
+
+        </div>
+
+
+        <div class="modal-actions pdf-modal-actions">
+
+            <button
+                type="button"
+                class="btn btn-secondary"
+                id="closePdfModalBtn"
+            >
+                Tutup
+            </button>
+
+            <button
+                type="button"
+                class="btn btn-primary"
+                id="downloadPdfBtn"
+            >
+                ↓ Unduh PDF
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
 <!-- LIBRARY -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script
+    src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"
+></script>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script
+    src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
+></script>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"
+></script>
+
+<script
+    src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+></script>
+
+<script
+    src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"
+></script>
 
 <script src="script.js"></script>
 
 </body>
+
 </html>
